@@ -1,4 +1,6 @@
-/* Body with fallback color and background image */
+/* =============================
+   Body & Background
+============================= */
 body {
     font-family: Arial, sans-serif;
     background-color: #222; /* fallback */
@@ -7,12 +9,14 @@ body {
     background-position: center center;
     background-size: cover;
     background-attachment: fixed;
-    color: white; /* default text color */
+    color: white;
     margin: 0;
     padding: 20px;
 }
 
-/* Layout containers */
+/* =============================
+   Layout Containers
+============================= */
 .container {
     display: flex;
     padding: 10px;
@@ -34,7 +38,44 @@ body {
     flex-direction: column;
 }
 
-/* Inputs, selects, buttons */
+/* =============================
+   Table Container
+============================= */
+.table-container {
+    flex: 1;
+    overflow: auto;
+}
+
+/* Highlight row on hover for visibility */
+.tabulator-row:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* =============================
+   Header & Controls
+============================= */
+.header-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* spacing between heading and controls */
+}
+
+h1, .controls {
+    background-color: rgba(0, 0, 0, 0.6); 
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* =============================
+   Inputs, Selects, Buttons
+============================= */
 input, button, select {
     margin: 3px 0;
     padding: 5px;
@@ -42,96 +83,46 @@ input, button, select {
     box-sizing: border-box;
 }
 
-/* Table container */
-.table-container {
-    flex: 1;
-    overflow: auto;
-}
-
-/*  Highlight row on hover for better visibility before clicking delete */
-.tabulator-row:hover {
-    background-color: rgba(255,255,255,0.1);
-}
-
-
-/* Controls area with semi-transparent background */
-/*
-.controls {
-    margin-bottom: 10px;
-    background-color: rgba(0,0,0,0.6);
-    padding: 5px 10px;
-    border-radius: 5px;
-    display: inline-block;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-
-h1, .controls {
-    background-color: rgba(0,0,0,0.6); 
-    padding: 5px 10px;
-    border-radius: 5px;
-    display: inline-block;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-
-*/
-
-h1, .controls {
-    background-color: rgba(0,0,0,0.6); 
-    padding: 5px 10px;
-    border-radius: 5px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-
-.header-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* space between heading and controls */
-}
-
-.controls {
-    display: flex;
-    flex-wrap: wrap; /* allow buttons and inputs to wrap to next line */
-    gap: 5px;
-    background-color: rgba(0,0,0,0.6);
-    padding: 5px 10px;
-    border-radius: 5px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-
-/* Clear All Orders button */
+/* Clear All Orders Button */
 .btn-clear {
-    background-color: #e74c3c; /* bright red */
+    background-color: #e74c3c;
     color: white;
     border: none;
     cursor: pointer;
 }
 
 .btn-clear:hover {
-    background-color: #c0392b; /* darker red on hover */
+    background-color: #c0392b;
 }
 
-.btn-table-add, .btn-table-delete {
-    padding: 0 4px; /* very narrow */
+/* =============================
+   Table + / − Buttons
+============================= */
+.btn-table-add,
+.btn-table-delete {
+    padding: 0 4px;
     margin: 0 1px;
     border: none;
     color: white;
     font-weight: bold;
-    font-size: 12px; /* smaller text */
+    font-size: 12px;
     cursor: pointer;
     border-radius: 2px;
     line-height: 1.2;
 }
 
+/* Green "+" Button */
 .btn-table-add {
-    background-color: #2ecc71; /* green */
+    background-color: #2ecc71;
 }
 
 .btn-table-add:hover {
     background-color: #27ae60;
 }
 
+/* Red "−" Button */
 .btn-table-delete {
-    background-color: #e74c3c; /* red */
+    background-color: #e74c3c;
 }
 
 .btn-table-delete:hover {
