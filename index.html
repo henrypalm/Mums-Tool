@@ -5,25 +5,16 @@
 <title>Order Tracker</title>
 <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
 <link rel="stylesheet" href="css/index-styles.css" />
-<!---<style>
-  body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-  }
-  #table-container {
-    height: 500px;
-  }
-  .controls {
-    margin-bottom: 10px;
-  }
-</style>--->
 </head>
 <body>
 
 <h1>Order Tracker</h1>
 
 <div class="controls">
-  <label>Filter by Customer: <input id="filter-customer" type="text" placeholder="Type name..."></label>
+  <label>
+    Filter by Customer:
+    <input id="filter-customer" type="text" placeholder="Type name...">
+  </label>
   <button id="download-csv">Export CSV</button>
   <input type="file" id="upload-csv" accept=".csv">
 </div>
@@ -32,13 +23,20 @@
 
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 <script>
+// Calculate row total
+function calcTotal(value, data) {
+    let total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0)) 
+                * (+data.quantity || 0) - (+data.returns || 0);
+    return total.toFixed(2);
+}
+
 // Sample data
 let tableData = [
     {price: 10, tax: 1, shipping: 2, fees: 0.5, quantity: 2, itemName: "Widget A", itemNumber: "A001", returns: 0, comments: "", dateOrdered: "2025-08-01", dateShipped: "2025-08-03", customer: "John Doe", tracking: "TRK123"},
     {price: 20, tax: 2, shipping: 3, fees: 1, quantity: 1, itemName: "Widget B", itemNumber: "B002", returns: 0, comments: "", dateOrdered: "2025-08-02", dateShipped: "2025-08-04", customer: "Jane Smith", tracking: "TRK456"}
 ];
 
-// Table setup
+// Initialize table
 let table = new Tabulator("#table-container", {
     height: "500px",
     data: tableData,
@@ -64,20 +62,10 @@ let table = new Tabulator("#table-container", {
     ]
 });
 
-// Total calculation
-function calcTotal(value, data, type, params, component) {
-    let total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0)) * (+data.quantity || 0) - (+data.returns || 0);
-    return total.toFixed(2);
-}
-
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
-    let val = this.value;
-    if(val){
-        table.setFilter("customer", "like", val);
-    } else {
-        table.clearFilter();
-    }
+    let val = this.value.trim();
+    val ? table.setFilter("customer", "like", val) : table.clearFilter();
 });
 
 // Export CSV
@@ -90,30 +78,13 @@ document.getElementById("upload-csv").addEventListener("change", function(e){
     let file = e.target.files[0];
     if(!file) return;
     let reader = new FileReader();
-    reader.onload = function(e){
-        let csv = e.target.result;
-        table.setDataFromCSV(csv);
+    reader.onload = function(ev){
+        let csv = ev.target.result;
+        let parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
+        table.setData(parsed);
     };
     reader.readAsText(file);
 });
-
-// Helper for CSV import
-Tabulator.extendModule("data", "loaders", {
-    csv: function(str){
-        let rows = str.trim().split("\n").map(r => r.split(","));
-        let headers = rows.shift();
-        return rows.map(row => {
-            let obj = {};
-            row.forEach((val, i) => obj[headers[i]] = val);
-            return obj;
-        });
-    }
-});
-
-table.setDataFromCSV = function(csvStr){
-    let parsed = Tabulator.prototype.modules.data.loaders.csv(csvStr);
-    table.setData(parsed);
-};
 </script>
 </body>
 </html>
