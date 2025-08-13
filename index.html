@@ -7,9 +7,9 @@
 <meta property="og:image" content="https://mumstool.onthewifi.com/imgs/MumsToolPreview.png" />
 <meta property="og:url" content="https://mumstool.onthewifi.com/" />
 <meta property="og:type" content="website" />
-  
+
 <title>Item Tracker</title>
-<link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon">  
+<link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon">
 <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
 <link rel="stylesheet" href="/css/index-styles.css" />
 </head>
@@ -28,13 +28,11 @@
 <script>
   const WIP_KEY = "wipDismissed";
 
-  // Hide overlay if user previously dismissed
   if(localStorage.getItem(WIP_KEY) === "true"){
     document.getElementById("wip-overlay").style.display = "none";
   }
 
   function closeWIP() {
-    // Save checkbox state
     const dontShow = document.getElementById("wip-dont-show").checked;
     if(dontShow){
       localStorage.setItem(WIP_KEY, "true");
@@ -66,18 +64,14 @@
 
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 <script>
-  
-// Local storage key
 const GRAND_TOTAL_KEY = "orderTrackerGrandTotal";
 const STORAGE_KEY = "orderTrackerData";
 const TAX_RATE = 0.06;
 
-// Load saved data
 let savedData = localStorage.getItem(STORAGE_KEY);
 let tableData = savedData ? JSON.parse(savedData) : [];
 
-  
-// After loading savedData, ensure GrandTotalBar is displaying persistent data
+// Pre-calculate totals and tax
 if (tableData.length) {
     tableData.forEach(row => {
         let price = +row.price || 0;
@@ -88,15 +82,13 @@ if (tableData.length) {
 
         let subtotal = price * qty;
         let tax = subtotal * TAX_RATE;
-        let grandTotal = subtotal + tax + shipping + fees - returns;
+        let total = subtotal + tax + shipping + fees - returns;
 
         row.tax = tax.toFixed(2);
-        row.total = grandTotal.toFixed(2);
+        row.total = total.toFixed(2);
     });
 }
 
-
-// Remove button formatter
 function removeButton(cell){
     const row = cell.getRow();
     const btn = document.createElement("button");
@@ -110,7 +102,7 @@ function removeButton(cell){
     return btn;
 }
 
-// Initialize Tabulator with reorganized columns
+// Tabulator initialization
 let table = new Tabulator("#table-container", {
     selectable: true,
     height: "500px",
@@ -120,48 +112,40 @@ let table = new Tabulator("#table-container", {
     resizableColumns: true,
     pagination: false,
     columns: [
-    {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
-    {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
-    {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
-    {title: "Price", field: "price", editor: "number", sorter: "number", 
-        formatter:"money", 
-        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-    },
-    {title: "Shipping", field: "shipping", editor: "number", sorter: "number", 
-        formatter:"money", 
-        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-    },
-    {title: "Fees", field: "fees", editor: "number", sorter: "number", 
-        formatter:"money", 
-        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-    },
-    {title: "Returns", field: "returns", editor: "number", sorter: "number", 
-        formatter:"money", 
-        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-    },
-    {title: "Tax", field: "tax", editor: "number", sorter: "number", 
-        formatter:"money", 
-        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-    },
-    {title: "Total", field: "total", sorter: "number", mutator: totalMutator, 
-        formatter:"money", 
-        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-    },
-    {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date", 
-        formatter:"datetime", 
-        formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}
-    },
-    {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date", 
-        formatter:"datetime", 
-        formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}
-    },
-    {title: "Customer", field: "customer", editor: "input", sorter: "string"},
-    {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
-    {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
+        {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
+        {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
+        {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
+        {title: "Price", field: "price", editor: "number", sorter: "number", 
+            formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+        },
+        {title: "Shipping", field: "shipping", editor: "number", sorter: "number", 
+            formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+        },
+        {title: "Fees", field: "fees", editor: "number", sorter: "number", 
+            formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+        },
+        {title: "Returns", field: "returns", editor: "number", sorter: "number", 
+            formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+        },
+        {title: "Tax", field: "tax", editor: "number", sorter: "number", 
+            formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+        },
+        {title: "Total", field: "total", sorter: "number", mutator: totalMutator, 
+            formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+        },
+        {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date", 
+            formatter:"datetime", formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}
+        },
+        {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date", 
+            formatter:"datetime", formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}
+        },
+        {title: "Customer", field: "customer", editor: "input", sorter: "string"},
+        {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
+        {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
     ]
 });
 
-// Mutator for Total and auto-update tax
+// Mutator for Total column
 function totalMutator(value, data){
     let price = +data.price || 0;
     let qty = +data.quantity || 0;
@@ -173,32 +157,32 @@ function totalMutator(value, data){
     let tax = subtotal * TAX_RATE;
     let total = subtotal + tax + shipping + fees - returns;
 
-    data.tax = tax.toFixed(2); // update tax field
+    data.tax = tax.toFixed(2);
     return total.toFixed(2);
 }
 
-// Save table data to localStorage
+// Save table data
 function saveTableData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(table.getData()));
 }
 
-// Update grand total (persistent across refreshes)
+// Update grand total
 function updateGrandTotal() {
     const data = table.getData();
     const grandTotal = data.reduce((sum, row) => sum + (+row.total || 0), 0);
     document.getElementById("grand-total-value").textContent = grandTotal.toFixed(2);
-    localStorage.setItem(GRAND_TOTAL_KEY, grandTotal.toFixed(2)); // save to localStorage
+    localStorage.setItem(GRAND_TOTAL_KEY, grandTotal.toFixed(2));
 }
 
-// After loading tableData
+// Load grand total
 const savedGrandTotal = localStorage.getItem(GRAND_TOTAL_KEY);
 if(savedGrandTotal){
     document.getElementById("grand-total-value").textContent = parseFloat(savedGrandTotal).toFixed(2);
 } else {
-    updateGrandTotal(); // calculate if not saved
+    updateGrandTotal();
 }
 
-// Update row totals on edit
+// Recalculate totals when cell edited
 table.on("cellEdited", function(cell){
     const row = cell.getRow();
     const data = row.getData();
@@ -216,17 +200,16 @@ table.on("cellEdited", function(cell){
     updateGrandTotal();
 });
 
-// Ensure at least one row exists
+// Ensure at least one row
 function ensureAtLeastOneRow() {
     if (table.getData().length === 0) {
         table.addRow({}, false);
     }
 }
 
-// After table is initialized
 ensureAtLeastOneRow();
 
-// After deleting a row
+// Row deleted
 table.on("rowDeleted", function(){
     ensureAtLeastOneRow();
     saveTableData();
@@ -238,7 +221,7 @@ document.getElementById("clear-orders").addEventListener("click", function(){
     if(confirm("Are you sure you want to clear all orders? This cannot be undone.")){
         localStorage.removeItem(STORAGE_KEY);
         table.clearData();
-        ensureAtLeastOneRow(); // keep one blank row
+        ensureAtLeastOneRow();
         saveTableData();
         updateGrandTotal();
     }
@@ -268,9 +251,9 @@ document.getElementById("upload-csv").addEventListener("change", function(e){
     reader.readAsText(file);
 });
 
-// Add new row button
+// Add new row
 document.getElementById("add-row").addEventListener("click", () => {
-    table.addRow({}); // blank row at bottom
+    table.addRow({});
     saveTableData();
 });
 </script>
