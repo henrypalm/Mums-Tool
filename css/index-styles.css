@@ -16,14 +16,14 @@
     padding: 1rem;
     flex-direction: column;
 }
-  
+
 /* Message styling */
 #wip-overlay span {
     font-size: 2.5rem;
     font-weight: bold;
     color: gold;
 }
-  
+
 /* Button to close */
 #wip-overlay button {
     margin-top: 20px;
@@ -34,7 +34,6 @@
     font-size: 1rem;
     cursor: pointer;
 }
-
 
 /* =============================
    Body & Background
@@ -76,24 +75,26 @@ body {
     flex-direction: column;
 }
 
+/* =============================
+   Grand Total Bar
+============================= */
 #grand-total-bar {
     position: fixed;
-    bottom: 10px;                /* lifts it slightly above bottom edge */
+    bottom: 10px;                /* lifts slightly above bottom */
     left: 50%;                   /* center horizontally */
-    transform: translateX(-50%); /* center properly */
-    width: auto;                 /* shrink to fit content */
-    max-width: 600px;            /* optional max width for aesthetics */
-    background-color: rgba(30,30,30,0.95); /* slightly lighter, more solid */
-    color: gold;                 /* make text pop */
-    padding: 15px 25px;          /* more padding for visibility */
+    transform: translateX(-50%);
+    width: auto;
+    max-width: 600px;
+    background-color: rgba(30,30,30,0.95); /* slightly lighter */
+    color: gold;
+    padding: 15px 25px;
     font-size: 20px;
     font-weight: bold;
     text-align: center;
-    border-radius: 8px;          /* rounded corners for nice visual feel */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.7); /* more pronounced shadow */
-    z-index: 9999;               /* stays above everything */
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.7);
+    z-index: 9999;
 }
-
 
 /* =============================
    Table Container
@@ -231,5 +232,11 @@ input, button, select {
 
     #table-container .tabulator {
         height: auto; /* table grows with content on mobile */
+    }
+
+    #grand-total-bar {
+        max-width: 90%; /* fit smaller screens nicely */
+        font-size: 18px;
+        padding: 12px 18px;
     }
 }
