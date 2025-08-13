@@ -76,6 +76,20 @@ body {
     flex-direction: column;
 }
 
+#grand-total-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: right;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.5);
+}
+
 /* =============================
    Table Container
 ============================= */
