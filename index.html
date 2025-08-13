@@ -192,6 +192,34 @@ table.on("cellEdited", function(cell){
     updateGrandTotal();
 });
 
+// Ensure at least one row exists
+function ensureAtLeastOneRow() {
+    if (table.getData().length === 0) {
+        table.addRow({}, false);
+    }
+}
+
+// After table is initialized
+ensureAtLeastOneRow();
+
+// After deleting a row
+table.on("rowDeleted", function(){
+    ensureAtLeastOneRow();
+    saveTableData();
+    updateGrandTotal();
+});
+
+// Clear all orders
+document.getElementById("clear-orders").addEventListener("click", function(){
+    if(confirm("Are you sure you want to clear all orders? This cannot be undone.")){
+        localStorage.removeItem(STORAGE_KEY);
+        table.clearData();
+        ensureAtLeastOneRow(); // keep one blank row
+        saveTableData();
+        updateGrandTotal();
+    }
+});
+
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
     let val = this.value.trim();
@@ -214,14 +242,6 @@ document.getElementById("upload-csv").addEventListener("change", function(e){
         table.setData(parsed).then(saveTableData);
     };
     reader.readAsText(file);
-});
-
-// Clear all orders
-document.getElementById("clear-orders").addEventListener("click", function(){
-    if(confirm("Are you sure you want to clear all orders? This cannot be undone.")){
-        localStorage.removeItem(STORAGE_KEY);
-        table.clearData();
-    }
 });
 
 // Add new row button
