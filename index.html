@@ -8,10 +8,18 @@
 <meta property="og:url" content="https://mumstool.onthewifi.com/" />
 <meta property="og:type" content="website" />
 
-<title>Item Tracker</title>
-<link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon">
-<link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+<title>Order Tracker</title>
+<link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon" />
+<link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="/css/index-styles.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { padding: 12px; }
+  .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  #order-table { height: 520px; }
+  #grand-total-bar { position: sticky; bottom: 0; background: #111; color:#fff; padding:10px 12px; font-weight:700; }
+  .btn-table-delete { padding:0 8px; line-height: 1.6; cursor:pointer; }
+</style>
 </head>
 <body>
 
@@ -40,203 +48,310 @@ function closeWIP() {
 }
 </script>
 
-<!-- Header and Controls -->
-<div class="header-container">
-  <h1>Order Tracker</h1>
-  <div class="controls">
-    <label>
-      Filter by Customer:
-      <input id="filter-customer" type="text" placeholder="Type name...">
-    </label>
-    <input type="file" id="upload-csv" accept=".csv">
-    <button id="add-row" class="btn-add-row">Add New Row</button>
-    <button id="download-csv">Export CSV</button>
-    <button id="clear-orders" class="btn-clear">Clear All Orders</button>
-  </div>
+<h1>Order Tracker</h1>
+
+<div class="controls">
+  <label>
+    Filter by Customer:
+    <input id="filter-customer" type="text" placeholder="Type name..." />
+  </label>
+  <input type="file" id="upload-csv" accept=".csv" />
+  <button id="add-row" class="btn-add-row">Add New Row</button>
+  <button id="download-csv">Export CSV</button>
+  <button id="clear-orders" class="btn-clear">Clear All Orders</button>
 </div>
 
-<!-- Table Container -->
-<div id="table-container"></div>
+<div id="order-table"></div>
 
-<!-- Grand Total -->
 <div id="grand-total-bar">
-    Grand Total: $<span id="grand-total-value">0.00</span>
+  Grand Total: $<span id="grand-total-value">0.00</span>
 </div>
 
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 <script>
-const STORAGE_KEY = "orderTrackerData";
-const TAX_RATE = 0.06;
+  // ----------------- Constants & Storage -----------------
+  const STORAGE_KEY = "orderTrackerData";
+  const GRAND_TOTAL_KEY = "orderTrackerGrandTotal";
+  const TAX_RATE = 0.06;
 
-// Initialize table data with default row if localStorage empty
-let tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [{
-    itemName: "",
-    itemNumber: "",
-    quantity: 0,
-    price: 0,
-    shipping: 0,
-    fees: 0,
-    returns: 0,
-    tax: 0,
-    total: 0,
-    dateOrdered: "",
-    dateShipped: "",
-    customer: "",
-    tracking: ""
-}];
+  // ----------------- Helpers -----------------
+  // Convert various date inputs to ISO YYYY-MM-DD (what <input type="date"> expects)
+  function toISODate(val) {
+    if (!val) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val; // already ISO
+    const mmdd = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;   // MM/DD/YYYY
+    const m = String(val).match(mmdd);
+    if (m) {
+      const mm = m[1].padStart(2, "0");
+      const dd = m[2].padStart(2, "0");
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    // Fallback: try Date parsing (may be locale-sensitive)
+    const d = new Date(val);
+    if (!isNaN(d)) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return "";
+  }
 
-// Mutator for Total column
-function totalMutator(value, data){
-    let price = +data.price || 0;
-    let qty = +data.quantity || 0;
-    let shipping = +data.shipping || 0;
-    let fees = +data.fees || 0;
-    let returns = +data.returns || 0;
+  // Display date as MM/DD/YYYY from ISO or pass-through MM/DD/YYYY
+  function toDisplayDate(val) {
+    if (!val) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const [y, m, d] = val.split("-");
+      return `${m}/${d}/${y}`;
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+    const d = new Date(val);
+    if (!isNaN(d)) {
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    }
+    return val;
+  }
 
-    let subtotal = price * qty;
-    let tax = subtotal * TAX_RATE;
-    let total = subtotal + tax + shipping + fees - returns;
+  // Sanitize row fields so math/formatters never blow up
+  function sanitizeRow(row) {
+    return {
+      itemName: row.itemName || "",
+      itemNumber: row.itemNumber || "",
+      quantity: Number(row.quantity) || 0,
+      price: Number(row.price) || 0,
+      shipping: Number(row.shipping) || 0,
+      fees: Number(row.fees) || 0,
+      returns: Number(row.returns) || 0,
+      tax: Number(row.tax) || 0,
+      total: Number(row.total) || 0,
+      dateOrdered: row.dateOrdered || "",
+      dateShipped: row.dateShipped || "",
+      customer: row.customer || "",
+      tracking: row.tracking || ""
+    };
+  }
 
-    data.tax = tax; // store numeric tax
-    return total;
-}
+  // Custom date editor using <input type="date">
+  function dateEditor(cell, onRendered, success, cancel) {
+    const cellValue = cell.getValue();
+    const input = document.createElement("input");
+    input.type = "date";
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    input.value = toISODate(cellValue);
 
-// Remove button formatter
-function removeButton(cell){
-    let row = cell.getRow();
-    let btn = document.createElement("button");
+    onRendered(() => input.focus());
+
+    function save() { success(input.value || ""); }
+    function onKey(e) {
+      if (e.key === "Enter") save();
+      else if (e.key === "Escape") cancel();
+    }
+
+    input.addEventListener("blur", save);
+    input.addEventListener("keydown", onKey);
+
+    return input;
+  }
+
+  // Custom date formatter (MM/DD/YYYY)
+  function dateFormatter(cell) {
+    return toDisplayDate(cell.getValue());
+  }
+
+  // Per-row delete button
+  function removeButton(cell) {
+    const row = cell.getRow();
+    const btn = document.createElement("button");
     btn.textContent = "−";
     btn.className = "btn-table-delete";
-    btn.addEventListener("click", ()=>{
-        row.delete();
-        saveData();
-        updateGrandTotal();
+    btn.addEventListener("click", () => {
+      row.delete();
+      ensureAtLeastOneRow();
+      saveData();
+      updateGrandTotal();
     });
     return btn;
-}
+  }
 
-// Save data to localStorage
-function saveData(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(table.getData()));
-}
+  // ----------------- Load data & precompute -----------------
+  let tableData = [];
+  try {
+    tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    tableData = [];
+  }
 
-// Update grand total
-function updateGrandTotal(){
-    let total = table.getData().reduce((sum,row)=>sum+(+row.total||0),0);
-    document.getElementById("grand-total-value").textContent = total.toFixed(2);
-}
+  // Precompute totals/tax on load (so saved rows show formatted values immediately)
+  tableData = tableData.map(r => {
+    const row = sanitizeRow(r);
+    const subtotal = row.price * row.quantity;
+    row.tax = +(subtotal * TAX_RATE).toFixed(2);
+    row.total = +(subtotal + row.tax + row.shipping + row.fees - row.returns).toFixed(2);
+    return row;
+  });
 
-// Initialize Tabulator
-let table = new Tabulator("#table-container", {
-    height: "500px",
-    layout: "fitDataStretch",
+  // If nothing saved, start with one blank row
+  if (tableData.length === 0) tableData = [sanitizeRow({})];
+
+  // ----------------- Table -----------------
+  let table = new Tabulator("#order-table", {
     data: tableData,
+    layout: "fitDataStretch",
+    movableColumns: true,
+    resizableColumns: true,
+    pagination: false,
     columns: [
-        {title:"Item Name", field:"itemName", editor:"input"},
-        {title:"Item #", field:"itemNumber", editor:"input"},
-        {title:"Quantity", field:"quantity", editor:"number"},
-        {title:"Price", field:"price", editor:"number", formatter:"money", formatterParams:{symbol:"$", precision:2}},
-        {title:"Shipping", field:"shipping", editor:"number", formatter:"money", formatterParams:{symbol:"$", precision:2}},
-        {title:"Fees", field:"fees", editor:"number", formatter:"money", formatterParams:{symbol:"$", precision:2}},
-        {title:"Returns", field:"returns", editor:"number", formatter:"money", formatterParams:{symbol:"$", precision:2}},
-        {title:"Tax", field:"tax", editor:false, formatter:"money", formatterParams:{symbol:"$", precision:2}},
-        {title:"Total", field:"total", mutator:totalMutator, editor:false, formatter:"money", formatterParams:{symbol:"$", precision:2}},
-        {title:"Date Ordered", field:"dateOrdered", editor:"input", formatter:"datetime", formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}},
-        {title:"Date Shipped", field:"dateShipped", editor:"input", formatter:"datetime", formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}},
-        {title:"Customer", field:"customer", editor:"input"},
-        {title:"Tracking", field:"tracking", editor:"input"},
-        {title:"", hozAlign:"center", width:50, formatter:removeButton}
+      {title:"Item Name", field:"itemName", editor:"input"},
+      {title:"Item #", field:"itemNumber", editor:"input"},
+      {title:"Quantity", field:"quantity", editor:"number", sorter:"number"},
+      {title:"Price", field:"price", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Shipping", field:"shipping", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Fees", field:"fees", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Returns", field:"returns", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Tax", field:"tax", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Total", field:"total", sorter:"number", mutator: totalMutator,
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Date Ordered", field:"dateOrdered", sorter:"date",
+        editor: dateEditor, formatter: dateFormatter
+      },
+      {title:"Date Shipped", field:"dateShipped", sorter:"date",
+        editor: dateEditor, formatter: dateFormatter
+      },
+      {title:"Customer", field:"customer", editor:"input"},
+      {title:"Tracking", field:"tracking", editor:"input"},
+      {title:"", hozAlign:"center", width:50, headerSort:false, formatter: removeButton}
     ],
-    cellEdited:function(cell){
-        // recalc totals
-        cell.getRow().update({total: undefined});
-        saveData();
-        updateGrandTotal();
-    },
-    rowAdded:function(){ updateGrandTotal(); },
-    rowDeleted:function(){ updateGrandTotal(); }
-});
+  });
 
-// Ensure at least one row exists
-if(table.getData().length===0){
-    table.addRow({
-        itemName:"",
-        itemNumber:"",
-        quantity:0,
-        price:0,
-        shipping:0,
-        fees:0,
-        returns:0,
-        tax:0,
-        total:0,
-        dateOrdered:"",
-        dateShipped:"",
-        customer:"",
-        tracking:""
-    });
-}
+  // Calculate row total & tax via mutator when row data changes
+  function totalMutator(value, data) {
+    const price = +data.price || 0;
+    const qty = +data.quantity || 0;
+    const shipping = +data.shipping || 0;
+    const fees = +data.fees || 0;
+    const returns = +data.returns || 0;
 
-updateGrandTotal();
+    const subtotal = price * qty;
+    const tax = subtotal * TAX_RATE;
+    data.tax = +tax.toFixed(2); // keep tax in-sync
+    const total = subtotal + tax + shipping + fees - returns;
+    return +total.toFixed(2);
+  }
 
-// Controls
-document.getElementById("add-row").addEventListener("click", ()=>{ 
-    table.addRow({
-        itemName:"",
-        itemNumber:"",
-        quantity:0,
-        price:0,
-        shipping:0,
-        fees:0,
-        returns:0,
-        tax:0,
-        total:0,
-        dateOrdered:"",
-        dateShipped:"",
-        customer:"",
-        tracking:""
-    });
-    saveData(); 
-});
-document.getElementById("clear-orders").addEventListener("click", ()=>{
-    if(confirm("Clear all orders? This cannot be undone.")){
-        localStorage.removeItem(STORAGE_KEY);
-        table.clearData();
-        table.addRow({
-            itemName:"",
-            itemNumber:"",
-            quantity:0,
-            price:0,
-            shipping:0,
-            fees:0,
-            returns:0,
-            tax:0,
-            total:0,
-            dateOrdered:"",
-            dateShipped:"",
-            customer:"",
-            tracking:""
-        });
-        saveData();
-        updateGrandTotal();
+  // Recalculate + save whenever any editable cell changes
+  table.on("cellEdited", (cell) => {
+    // force re-run of mutators for the row
+    cell.getRow().update({});
+    saveData();
+    updateGrandTotal();
+  });
+
+  // After rows are deleted, keep at least one
+  table.on("rowDeleted", () => {
+    ensureAtLeastOneRow();
+    saveData();
+    updateGrandTotal();
+  });
+
+  // ----------------- Persistence & Totals -----------------
+  function saveData() {
+    const data = table.getData().map(sanitizeRow);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function updateGrandTotal() {
+    const data = table.getData();
+    const grand = data.reduce((sum, r) => sum + (+r.total || 0), 0);
+    const val = grand.toFixed(2);
+    document.getElementById("grand-total-value").textContent = val;
+    localStorage.setItem(GRAND_TOTAL_KEY, val);
+  }
+
+  function ensureAtLeastOneRow() {
+    if (table.getData().length === 0) {
+      table.addRow(sanitizeRow({}));
     }
-});
-document.getElementById("filter-customer").addEventListener("input", function(){
-    let val = this.value.trim();
-    val ? table.setFilter("customer","like",val) : table.clearFilter();
-});
-document.getElementById("download-csv").addEventListener("click", ()=>table.download("csv","orders.csv"));
-document.getElementById("upload-csv").addEventListener("change", function(e){
-    let file = e.target.files[0];
-    if(!file) return;
-    let reader = new FileReader();
-    reader.onload = function(ev){
-        let csv = ev.target.result;
-        let parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
-        table.setData(parsed).then(()=>{ saveData(); updateGrandTotal(); });
+  }
+
+  // Initialize grand total display from storage, or compute it
+  const savedGrand = localStorage.getItem(GRAND_TOTAL_KEY);
+  if (savedGrand != null) {
+    document.getElementById("grand-total-value").textContent = parseFloat(savedGrand).toFixed(2);
+  } else {
+    updateGrandTotal();
+  }
+
+  // Make sure there's always a row
+  ensureAtLeastOneRow();
+  updateGrandTotal();
+
+  // ----------------- Controls -----------------
+  document.getElementById("add-row").addEventListener("click", () => {
+    table.addRow(sanitizeRow({}));
+    saveData();
+    updateGrandTotal();
+  });
+
+  document.getElementById("clear-orders").addEventListener("click", () => {
+    if (confirm("Are you sure you want to clear all orders? This cannot be undone.")) {
+      localStorage.removeItem(STORAGE_KEY);
+      table.clearData();
+      ensureAtLeastOneRow();
+      saveData();
+      updateGrandTotal();
+    }
+  });
+
+  document.getElementById("filter-customer").addEventListener("input", function () {
+    const val = this.value.trim();
+    val ? table.setFilter("customer", "like", val) : table.clearFilter();
+  });
+
+  document.getElementById("download-csv").addEventListener("click", () => {
+    table.download("csv", "orders.csv");
+  });
+
+  // NOTE: this uses Tabulator's internal CSV loader (works with 5.5.0 as in your original code)
+  document.getElementById("upload-csv").addEventListener("change", function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+      const csv = ev.target.result;
+      const parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
+      table.setData(parsed).then(() => {
+        // Normalize dates into ISO for the date editor, then save & update totals
+        const normalized = table.getData().map(r => ({
+          ...r,
+          dateOrdered: toISODate(r.dateOrdered),
+          dateShipped: toISODate(r.dateShipped),
+        }));
+        table.setData(normalized).then(() => {
+          saveData();
+          updateGrandTotal();
+        });
+      });
     };
     reader.readAsText(file);
-});
+    // reset input so same file can be selected again later
+    e.target.value = "";
+  });
 </script>
-
 </body>
 </html>
