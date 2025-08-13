@@ -17,6 +17,7 @@
       Filter by Customer:
       <input id="filter-customer" type="text" placeholder="Type name...">
     </label>
+    <button id="add-row" class="btn-add-row">Add New Row</button>
     <button id="download-csv">Export CSV</button>
     <button id="clear-orders" class="btn-clear">Clear All Orders</button>
     <input type="file" id="upload-csv" accept=".csv">
@@ -68,6 +69,12 @@ function actionButtons(cell){
     return container;
 }
 
+// Add New Row button
+document.getElementById("add-row").addEventListener("click", () => {
+    table.addRow({}); // adds a blank row at the bottom
+    saveTableData();
+});
+  
 // Initialize table
 let table = new Tabulator("#table-container", {
     selectable: true,
