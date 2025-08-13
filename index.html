@@ -41,6 +41,33 @@ function calcTotal(value, data) {
 let savedData = localStorage.getItem(STORAGE_KEY);
 let tableData = savedData ? JSON.parse(savedData) : [];
 
+// Formatter for Add / Remove buttons
+function actionButtons(cell){
+    const row = cell.getRow();
+    const container = document.createElement("div");
+
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "+";
+    addBtn.className = "btn-table-add";
+    addBtn.style.marginRight = "4px";
+    addBtn.addEventListener("click", () => {
+        table.addRow({}, true, row).then(saveTableData);
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "−";
+    delBtn.className = "btn-table-delete";
+    delBtn.addEventListener("click", () => {
+        row.delete();
+        saveTableData();
+    });
+
+    container.appendChild(addBtn);
+    container.appendChild(delBtn);
+
+    return container;
+}
+
 // Initialize table
 let table = new Tabulator("#table-container", {
     selectable: true,
@@ -65,27 +92,18 @@ let table = new Tabulator("#table-container", {
         {title: "Customer", field: "customer", editor: "input", sorter: "string"},
         {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
         {title: "Total", field: "total", sorter: "number", mutator: calcTotal},
-        {title: "", hozAlign:"center", width: 90, headerSort:false, formatter:function(cell){
-          return `
-              <button class="btn-table-add">+</button>
-              <button class="btn-table-delete">−</button>
-          `;
-      }}
+        {title: "", hozAlign: "center", width: 90, headerSort: false, formatter: actionButtons}
     ]
 });
 
-// Function to save table data to localStorage
+// Save table data to localStorage
 function saveTableData() {
-    let data = table.getData();
+    const data = table.getData();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-// Save on any cell edit
+// Save on cell edit
 table.on("cellEdited", saveTableData);
-
-// Also save on row add/delete
-table.on("rowAdded", saveTableData);
-table.on("rowDeleted", saveTableData);
 
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
@@ -118,30 +136,7 @@ document.getElementById("clear-orders").addEventListener("click", function(){
         table.clearData();
     }
 });
-
-function actionButtons(cell, formatterParams, onRendered){
-    return `
-        <button class="btn-table-add">+</button>
-        <button class="btn-table-delete">−</button>
-    `;
-}
-
-// Use event delegation to handle clicks inside the table
-document.getElementById("table-container").addEventListener("click", function(e){
-    let row = table.getRowFromElement(e.target.closest(".tabulator-row"));
-    if(e.target.classList.contains("btn-table-add")){
-        table.addRow({}, true, row).then(() => saveTableData());
-    }
-    if(e.target.classList.contains("btn-table-delete")){
-        if(row){
-            row.delete();
-            saveTableData();
-        }
-    }
-});
-
-
-  
 </script>
+
 </body>
 </html>
