@@ -80,19 +80,20 @@ body {
 ============================= */
 #grand-total-bar {
     position: fixed;
-    bottom: 20px;             /* floating slightly above bottom */
+    bottom: 20px;             /* slightly above bottom */
     left: 0;
     width: 100%;              /* full-width */
-    background-color: rgba(30,30,30,0.95);
+    background-color: rgba(30,30,30,0.9); /* slightly transparent */
     color: gold;
     padding: 15px 0;
     font-size: 20px;
     font-weight: bold;
     text-align: center;       /* centered text */
-    box-shadow: 0 -4px 10px rgba(0,0,0,0.7);
+    box-shadow: 0 0 15px gold, 0 -4px 10px rgba(0,0,0,0.7); /* glowing effect */
+    text-shadow: 0 0 8px gold; /* glow on text */
+    border-top: 2px solid gold; /* subtle top border for definition */
     z-index: 9999;
 }
-
 
 /* =============================
    Table Container
