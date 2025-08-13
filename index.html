@@ -159,44 +159,6 @@ table.on("cellEdited", function(cell){
     updateGrandTotal();
 });
 
-// Update grand total on add/remove
-table.on("dataChanged", updateGrandTotal);
-
-// Initial grand total calculation
-updateGrandTotal();
-
-
-// Call it whenever table changes
-table.on("cellEdited", function(cell){
-    const row = cell.getRow();
-    const data = row.getData();
-
-    let price = +data.price || 0;
-    let qty = +data.quantity || 0;
-    let shipping = +data.shipping || 0;
-    let fees = +data.fees || 0;
-    let returns = +data.returns || 0;
-
-    let subtotal = price * qty;
-    let tax = subtotal * TAX_RATE;
-    let grandTotalRow = subtotal + tax + shipping + fees - returns;
-
-    row.update({
-        tax: tax.toFixed(2),
-        total: grandTotalRow.toFixed(2)
-    });
-
-    saveTableData();
-    updateGrandTotal(); // update bar
-});
-
-// Also update on row add/delete
-table.on("dataChanged", updateGrandTotal);
-
-// Initial update on page load
-updateGrandTotal();
-
-
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
     let val = this.value.trim();
