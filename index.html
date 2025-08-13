@@ -9,16 +9,18 @@
 </head>
 <body>
 
-<h1>Order Tracker</h1>
-
-<div class="controls">
-  <label>
-    Filter by Customer:
-    <input id="filter-customer" type="text" placeholder="Type name...">
-  </label>
-  <button id="download-csv">Export CSV</button>
-  <button id="clear-orders" class="btn-clear">Clear All Orders</button>
-  <input type="file" id="upload-csv" accept=".csv">
+<div class="header-container">
+  <h1>Order Tracker</h1>
+  
+  <div class="controls">
+    <label>
+      Filter by Customer:
+      <input id="filter-customer" type="text" placeholder="Type name...">
+    </label>
+    <button id="download-csv">Export CSV</button>
+    <button id="clear-orders" class="btn-clear">Clear All Orders</button>
+    <input type="file" id="upload-csv" accept=".csv">
+  </div>
 </div>
 
 <div id="table-container"></div>
@@ -41,6 +43,7 @@ let tableData = savedData ? JSON.parse(savedData) : [];
 
 // Initialize table
 let table = new Tabulator("#table-container", {
+    selectable: true,
     height: "500px",
     data: tableData,
     layout: "fitDataStretch",
@@ -61,7 +64,8 @@ let table = new Tabulator("#table-container", {
         {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date"},
         {title: "Customer", field: "customer", editor: "input", sorter: "string"},
         {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
-        {title: "Total", field: "total", sorter: "number", mutator: calcTotal}
+        {title: "Total", field: "total", sorter: "number", mutator: calcTotal},
+        {title: "", hozAlign: "center", formatter: actionButtons, width: 50, headerSort: false}
     ]
 });
 
@@ -110,6 +114,45 @@ document.getElementById("clear-orders").addEventListener("click", function(){
     }
 });
 
+// Add a new empty row
+document.getElementById("add-row").addEventListener("click", function(){
+    table.addRow({}).then(() => saveTableData());
+});
+
+// Delete the selected row
+document.getElementById("delete-row").addEventListener("click", function(){
+    let selected = table.getSelectedRows();
+    if(selected.length){
+        selected.forEach(row => row.delete());
+        saveTableData();
+    } else {
+        alert("Please select a row to delete.");
+    }
+});
+
+function actionButtons(cell, formatterParams, onRendered){
+    return `
+        <button class="btn-table-add">+</button>
+        <button class="btn-table-delete">−</button>
+    `;
+}
+
+// Use event delegation to handle clicks inside the table
+document.getElementById("table-container").addEventListener("click", function(e){
+    let row = table.getRowFromElement(e.target.closest(".tabulator-row"));
+    if(e.target.classList.contains("btn-table-add")){
+        table.addRow({}, true, row).then(() => saveTableData());
+    }
+    if(e.target.classList.contains("btn-table-delete")){
+        if(row){
+            row.delete();
+            saveTableData();
+        }
+    }
+});
+
+
+  
 </script>
 </body>
 </html>
