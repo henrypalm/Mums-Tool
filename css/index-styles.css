@@ -95,6 +95,20 @@ input, button, select {
     background-color: #c0392b;
 }
 
+/* Add New Row button */
+.btn-add-row {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 3px;
+}
+
+.btn-add-row:hover {
+    background-color: #2980b9;
+}
+
 /* =============================
    Table + / − Buttons
 ============================= */
