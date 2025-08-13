@@ -62,6 +62,7 @@
 <script>
   
 // Local storage key
+const GRAND_TOTAL_KEY = "orderTrackerGrandTotal";
 const STORAGE_KEY = "orderTrackerData";
 const TAX_RATE = 0.06;
 
@@ -69,6 +70,7 @@ const TAX_RATE = 0.06;
 let savedData = localStorage.getItem(STORAGE_KEY);
 let tableData = savedData ? JSON.parse(savedData) : [];
 
+  
 // After loading savedData, ensure GrandTotalBar is displaying persistent data
 if (tableData.length) {
     tableData.forEach(row => {
@@ -155,6 +157,15 @@ function updateGrandTotal() {
     const data = table.getData();
     const grandTotal = data.reduce((sum, row) => sum + (+row.total || 0), 0);
     document.getElementById("grand-total-value").textContent = grandTotal.toFixed(2);
+    localStorage.setItem(GRAND_TOTAL_KEY, grandTotal.toFixed(2)); // save to localStorage
+}
+
+// After loading tableData
+const savedGrandTotal = localStorage.getItem(GRAND_TOTAL_KEY);
+if(savedGrandTotal){
+    document.getElementById("grand-total-value").textContent = parseFloat(savedGrandTotal).toFixed(2);
+} else {
+    updateGrandTotal(); // calculate if not saved
 }
 
 // Update row totals on edit
