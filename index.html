@@ -17,13 +17,10 @@
       Filter by Customer:
       <input id="filter-customer" type="text" placeholder="Type name...">
     </label>
-
+    <input type="file" id="upload-csv" accept=".csv">
+    <button id="add-row" class="btn-add-row">Add New Row</button>
     <button id="download-csv">Export CSV</button>
     <button id="clear-orders" class="btn-clear">Clear All Orders</button>
-    <input type="file" id="upload-csv" accept=".csv">
-
-    <!-- Add New Row button below file input -->
-    <button id="add-row" class="btn-add-row">Add New Row</button>
   </div>
 </div>
 
@@ -33,13 +30,6 @@
 <script>
 // Local storage key
 const STORAGE_KEY = "orderTrackerData";
-
-// Calculate row total
-function calcTotal(value, data) {
-    let total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0)) 
-                * (+data.quantity || 0) - (+data.returns || 0);
-    return total.toFixed(2);
-}
 
 // Load saved data from localStorage
 let savedData = localStorage.getItem(STORAGE_KEY);
@@ -58,7 +48,7 @@ function removeButton(cell){
     return btn;
 }
 
-// Initialize table
+// Initialize Tabulator
 let table = new Tabulator("#table-container", {
     selectable: true,
     height: "500px",
@@ -81,15 +71,18 @@ let table = new Tabulator("#table-container", {
         {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date"},
         {title: "Customer", field: "customer", editor: "input", sorter: "string"},
         {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
-        {title: "Total", field: "total", sorter: "number", mutator: calcTotal},
+        {
+            title: "Total",
+            field: "total",
+            sorter: "number",
+            mutator: function(value, data){
+                let total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0))
+                            * (+data.quantity || 0) - (+data.returns || 0);
+                return total.toFixed(2);
+            }
+        },
         {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
     ]
-});
-
-// Add New Row button (adds blank row at bottom)
-document.getElementById("add-row").addEventListener("click", () => {
-    table.addRow({});
-    saveTableData();
 });
 
 // Save table data to localStorage
@@ -98,8 +91,15 @@ function saveTableData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-// Save on cell edit
-table.on("cellEdited", saveTableData);
+// Live Total update on any relevant field edit
+table.on("cellEdited", function(cell){
+    const row = cell.getRow();
+    const data = row.getData();
+    const total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0))
+                  * (+data.quantity || 0) - (+data.returns || 0);
+    row.update({ total: total.toFixed(2) });
+    saveTableData();
+});
 
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
@@ -133,6 +133,11 @@ document.getElementById("clear-orders").addEventListener("click", function(){
     }
 });
 
+// Add new row button
+document.getElementById("add-row").addEventListener("click", () => {
+    table.addRow({}); // blank row at the bottom
+    saveTableData();
+});
 </script>
 
 </body>
