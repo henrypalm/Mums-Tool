@@ -2,7 +2,7 @@
 body {
     font-family: Arial, sans-serif;
     background-color: #222; /* fallback */
-    background-image: url('/imgs/MumsToolBackground.png');
+    background-image: url('/imgs/MumsToolVerticalBackground.png');
     background-repeat: no-repeat;
     background-position: center center;
     background-size: cover;
