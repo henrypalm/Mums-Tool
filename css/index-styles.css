@@ -1,12 +1,13 @@
-body { font-family: Arial; background:#222; color:white; margin:0; }
+body { font-family: Arial; background:#222; color:white; margin:0; padding: 20px;}
 .container { display:flex; padding:10px; height:100vh; box-sizing:border-box; }
 .left { width:350px; background:#333; padding:10px; overflow-y:auto; }
 .right { flex:1; padding:10px; display:flex; flex-direction:column; }
 input, button, select { margin:3px 0; padding:5px; width:100%; box-sizing:border-box; }
-table { width:100%; border-collapse:collapse; margin-top:10px; }
+container { width:100%; border-collapse:collapse; margin-top:10px; }
 th, td { border:1px solid #555; padding:5px; text-align:center; white-space:nowrap; }
 th { cursor:pointer; background:#444; position:sticky; top:0; }
 tr:nth-child(even) { background:#555; }
 tr:nth-child(odd) { background:#666; }
 .table-container { flex:1; overflow:auto; }
 canvas { margin-top:20px; background:#fff; max-height:300px; }
+.controls {margin-bottom: 10px; }
