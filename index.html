@@ -17,10 +17,13 @@
       Filter by Customer:
       <input id="filter-customer" type="text" placeholder="Type name...">
     </label>
-    <button id="add-row" class="btn-add-row">Add New Row</button>
+
     <button id="download-csv">Export CSV</button>
     <button id="clear-orders" class="btn-clear">Clear All Orders</button>
     <input type="file" id="upload-csv" accept=".csv">
+
+    <!-- Add New Row button below file input -->
+    <button id="add-row" class="btn-add-row">Add New Row</button>
   </div>
 </div>
 
@@ -42,39 +45,19 @@ function calcTotal(value, data) {
 let savedData = localStorage.getItem(STORAGE_KEY);
 let tableData = savedData ? JSON.parse(savedData) : [];
 
-// Formatter for Add / Remove buttons
-function actionButtons(cell){
+// Formatter for Remove button only
+function removeButton(cell){
     const row = cell.getRow();
-    const container = document.createElement("div");
-
-    const addBtn = document.createElement("button");
-    addBtn.textContent = "+";
-    addBtn.className = "btn-table-add";
-    addBtn.style.marginRight = "4px";
-    addBtn.addEventListener("click", () => {
-        table.addRow({}, true, row).then(saveTableData);
-    });
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "−";
-    delBtn.className = "btn-table-delete";
-    delBtn.addEventListener("click", () => {
+    const btn = document.createElement("button");
+    btn.textContent = "−";
+    btn.className = "btn-table-delete";
+    btn.addEventListener("click", () => {
         row.delete();
         saveTableData();
     });
-
-    container.appendChild(addBtn);
-    container.appendChild(delBtn);
-
-    return container;
+    return btn;
 }
 
-// Add New Row button
-document.getElementById("add-row").addEventListener("click", () => {
-    table.addRow({}); // adds a blank row at the bottom
-    saveTableData();
-});
-  
 // Initialize table
 let table = new Tabulator("#table-container", {
     selectable: true,
@@ -99,8 +82,14 @@ let table = new Tabulator("#table-container", {
         {title: "Customer", field: "customer", editor: "input", sorter: "string"},
         {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
         {title: "Total", field: "total", sorter: "number", mutator: calcTotal},
-        {title: "", hozAlign: "center", width: 90, headerSort: false, formatter: actionButtons}
+        {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
     ]
+});
+
+// Add New Row button (adds blank row at bottom)
+document.getElementById("add-row").addEventListener("click", () => {
+    table.addRow({});
+    saveTableData();
 });
 
 // Save table data to localStorage
@@ -131,7 +120,7 @@ document.getElementById("upload-csv").addEventListener("change", function(e){
     reader.onload = function(ev){
         let csv = ev.target.result;
         let parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
-        table.setData(parsed).then(saveTableData); // save after loading
+        table.setData(parsed).then(saveTableData);
     };
     reader.readAsText(file);
 });
@@ -143,6 +132,7 @@ document.getElementById("clear-orders").addEventListener("click", function(){
         table.clearData();
     }
 });
+
 </script>
 
 </body>
