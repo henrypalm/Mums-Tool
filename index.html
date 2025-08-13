@@ -38,6 +38,10 @@
 
 <div id="table-container"></div>
 
+<div id="grand-total-bar">
+    Grand Total: $<span id="grand-total-value">0.00</span>
+</div>
+
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 <script>
 // Local storage key
@@ -113,6 +117,14 @@ function saveTableData() {
 }
 
 // Live update totals when relevant fields change
+// Function to update grand total
+function updateGrandTotal() {
+    let data = table.getData();
+    let grandTotal = data.reduce((sum, row) => sum + (+row.total || 0), 0);
+    document.getElementById("grand-total-value").textContent = grandTotal.toFixed(2);
+}
+
+// Call it whenever table changes
 table.on("cellEdited", function(cell){
     const row = cell.getRow();
     const data = row.getData();
@@ -125,15 +137,23 @@ table.on("cellEdited", function(cell){
 
     let subtotal = price * qty;
     let tax = subtotal * TAX_RATE;
-    let grandTotal = subtotal + tax + shipping + fees - returns;
+    let grandTotalRow = subtotal + tax + shipping + fees - returns;
 
     row.update({
         tax: tax.toFixed(2),
-        total: grandTotal.toFixed(2)
+        total: grandTotalRow.toFixed(2)
     });
 
     saveTableData();
+    updateGrandTotal(); // update bar
 });
+
+// Also update on row add/delete
+table.on("dataChanged", updateGrandTotal);
+
+// Initial update on page load
+updateGrandTotal();
+
 
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
