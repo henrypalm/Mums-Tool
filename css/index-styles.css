@@ -48,6 +48,12 @@ input, button, select {
     overflow: auto;
 }
 
+/*  Highlight row on hover for better visibility before clicking delete */
+.tabulator-row:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+
 /* Controls area with semi-transparent background */
 /*
 .controls {
