@@ -65,7 +65,12 @@ let table = new Tabulator("#table-container", {
         {title: "Customer", field: "customer", editor: "input", sorter: "string"},
         {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
         {title: "Total", field: "total", sorter: "number", mutator: calcTotal},
-        {title: "", hozAlign: "center", formatter: actionButtons, width: 50, headerSort: false}
+        {title: "", hozAlign:"center", width: 90, headerSort:false, formatter:function(cell){
+          return `
+              <button class="btn-table-add">+</button>
+              <button class="btn-table-delete">−</button>
+          `;
+      }}
     ]
 });
 
