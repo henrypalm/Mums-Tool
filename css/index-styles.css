@@ -78,17 +78,22 @@ body {
 
 #grand-total-bar {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: rgba(0,0,0,0.85);
-    color: #fff;
-    padding: 10px 20px;
-    font-size: 18px;
+    bottom: 10px;                /* lifts it slightly above bottom edge */
+    left: 50%;                   /* center horizontally */
+    transform: translateX(-50%); /* center properly */
+    width: auto;                 /* shrink to fit content */
+    max-width: 600px;            /* optional max width for aesthetics */
+    background-color: rgba(30,30,30,0.95); /* slightly lighter, more solid */
+    color: gold;                 /* make text pop */
+    padding: 15px 25px;          /* more padding for visibility */
+    font-size: 20px;
     font-weight: bold;
-    text-align: right;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.5);
+    text-align: center;
+    border-radius: 8px;          /* rounded corners for nice visual feel */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.7); /* more pronounced shadow */
+    z-index: 9999;               /* stays above everything */
 }
+
 
 /* =============================
    Table Container
