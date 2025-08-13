@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Order Tracker</title>
+<link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+  #table-container {
+    height: 500px;
+  }
+  .controls {
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Order Tracker</h1>
+
+<div class="controls">
+  <label>Filter by Customer: <input id="filter-customer" type="text" placeholder="Type name..."></label>
+  <button id="download-csv">Export CSV</button>
+  <input type="file" id="upload-csv" accept=".csv">
+</div>
+
+<div id="table-container"></div>
+
+<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+<script>
+// Sample data
+let tableData = [
+    {price: 10, tax: 1, shipping: 2, fees: 0.5, quantity: 2, itemName: "Widget A", itemNumber: "A001", returns: 0, comments: "", dateOrdered: "2025-08-01", dateShipped: "2025-08-03", customer: "John Doe", tracking: "TRK123"},
+    {price: 20, tax: 2, shipping: 3, fees: 1, quantity: 1, itemName: "Widget B", itemNumber: "B002", returns: 0, comments: "", dateOrdered: "2025-08-02", dateShipped: "2025-08-04", customer: "Jane Smith", tracking: "TRK456"}
+];
+
+// Table setup
+let table = new Tabulator("#table-container", {
+    height: "500px",
+    data: tableData,
+    layout: "fitDataStretch",
+    movableColumns: true,
+    resizableColumns: true,
+    pagination: false,
+    columns: [
+        {title: "Price", field: "price", editor: "number", sorter: "number"},
+        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
+        {title: "Shipping", field: "shipping", editor: "number", sorter: "number"},
+        {title: "Fees", field: "fees", editor: "number", sorter: "number"},
+        {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
+        {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
+        {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
+        {title: "Returns", field: "returns", editor: "number", sorter: "number"},
+        {title: "Comments", field: "comments", editor: "input"},
+        {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date"},
+        {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date"},
+        {title: "Customer", field: "customer", editor: "input", sorter: "string"},
+        {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
+        {title: "Total", field: "total", sorter: "number", mutator: calcTotal}
+    ]
+});
+
+// Total calculation
+function calcTotal(value, data, type, params, component) {
+    let total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0)) * (+data.quantity || 0) - (+data.returns || 0);
+    return total.toFixed(2);
+}
+
+// Filter by customer
+document.getElementById("filter-customer").addEventListener("input", function(){
+    let val = this.value;
+    if(val){
+        table.setFilter("customer", "like", val);
+    } else {
+        table.clearFilter();
+    }
+});
+
+// Export CSV
+document.getElementById("download-csv").addEventListener("click", function(){
+    table.download("csv", "orders.csv");
+});
+
+// Import CSV
+document.getElementById("upload-csv").addEventListener("change", function(e){
+    let file = e.target.files[0];
+    if(!file) return;
+    let reader = new FileReader();
+    reader.onload = function(e){
+        let csv = e.target.result;
+        table.setDataFromCSV(csv);
+    };
+    reader.readAsText(file);
+});
+
+// Helper for CSV import
+Tabulator.extendModule("data", "loaders", {
+    csv: function(str){
+        let rows = str.trim().split("\n").map(r => r.split(","));
+        let headers = rows.shift();
+        return rows.map(row => {
+            let obj = {};
+            row.forEach((val, i) => obj[headers[i]] = val);
+            return obj;
+        });
+    }
+});
+
+table.setDataFromCSV = function(csvStr){
+    let parsed = Tabulator.prototype.modules.data.loaders.csv(csvStr);
+    table.setData(parsed);
+};
+</script>
+</body>
+</html>
