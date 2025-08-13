@@ -44,9 +44,10 @@
 
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 <script>
+  
 // Local storage key
 const STORAGE_KEY = "orderTrackerData";
-const TAX_RATE = 0.06; // 6% tax
+const TAX_RATE = 0.06;
 
 // Load saved data
 let savedData = localStorage.getItem(STORAGE_KEY);
@@ -61,11 +62,12 @@ function removeButton(cell){
     btn.addEventListener("click", () => {
         row.delete();
         saveTableData();
+        updateGrandTotal();
     });
     return btn;
 }
 
-// Initialize Tabulator
+// Initialize Tabulator with reorganized columns
 let table = new Tabulator("#table-container", {
     selectable: true,
     height: "500px",
@@ -77,52 +79,73 @@ let table = new Tabulator("#table-container", {
     columns: [
         {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
         {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
-        {title: "Price", field: "price", editor: "number", sorter: "number"},
         {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
+        {title: "Price", field: "price", editor: "number", sorter: "number"},
         {title: "Shipping", field: "shipping", editor: "number", sorter: "number"},
         {title: "Fees", field: "fees", editor: "number", sorter: "number"},
-        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
         {title: "Returns", field: "returns", editor: "number", sorter: "number"},
-        {title: "Comments", field: "comments", editor: "input"},
+        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
+        {title: "Total", field: "total", sorter: "number", mutator: totalMutator},
         {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date"},
         {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date"},
         {title: "Customer", field: "customer", editor: "input", sorter: "string"},
         {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
-        {
-            title: "Total",
-            field: "total",
-            sorter: "number",
-            mutator: function(value, data){
-                let price = +data.price || 0;
-                let qty = +data.quantity || 0;
-                let shipping = +data.shipping || 0;
-                let fees = +data.fees || 0;
-                let returns = +data.returns || 0;
-
-                let subtotal = price * qty;
-                let tax = subtotal * TAX_RATE;
-                let grandTotal = subtotal + tax + shipping + fees - returns;
-
-                data.tax = tax.toFixed(2); // auto-update tax field
-                return grandTotal.toFixed(2);
-            }
-        },
         {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
     ]
 });
 
-// Save data
+// Mutator for Total and auto-update tax
+function totalMutator(value, data){
+    let price = +data.price || 0;
+    let qty = +data.quantity || 0;
+    let shipping = +data.shipping || 0;
+    let fees = +data.fees || 0;
+    let returns = +data.returns || 0;
+
+    let subtotal = price * qty;
+    let tax = subtotal * TAX_RATE;
+    let total = subtotal + tax + shipping + fees - returns;
+
+    data.tax = tax.toFixed(2); // update tax field
+    return total.toFixed(2);
+}
+
+// Save table data to localStorage
 function saveTableData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(table.getData()));
 }
 
-// Live update totals when relevant fields change
-// Function to update grand total
+// Update grand total (persistent across refreshes)
 function updateGrandTotal() {
-    let data = table.getData();
-    let grandTotal = data.reduce((sum, row) => sum + (+row.total || 0), 0);
+    const data = table.getData();
+    const grandTotal = data.reduce((sum, row) => sum + (+row.total || 0), 0);
     document.getElementById("grand-total-value").textContent = grandTotal.toFixed(2);
 }
+
+// Update row totals on edit
+table.on("cellEdited", function(cell){
+    const row = cell.getRow();
+    const data = row.getData();
+
+    const subtotal = (+data.price || 0) * (+data.quantity || 0);
+    const tax = subtotal * TAX_RATE;
+    const total = subtotal + tax + (+data.shipping || 0) + (+data.fees || 0) - (+data.returns || 0);
+
+    row.update({
+        tax: tax.toFixed(2),
+        total: total.toFixed(2)
+    });
+
+    saveTableData();
+    updateGrandTotal();
+});
+
+// Update grand total on add/remove
+table.on("dataChanged", updateGrandTotal);
+
+// Initial grand total calculation
+updateGrandTotal();
+
 
 // Call it whenever table changes
 table.on("cellEdited", function(cell){
