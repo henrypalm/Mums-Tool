@@ -120,20 +120,44 @@ let table = new Tabulator("#table-container", {
     resizableColumns: true,
     pagination: false,
     columns: [
-        {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
-        {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
-        {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
-        {title: "Price", field: "price", editor: "number", sorter: "number"},
-        {title: "Shipping", field: "shipping", editor: "number", sorter: "number"},
-        {title: "Fees", field: "fees", editor: "number", sorter: "number"},
-        {title: "Returns", field: "returns", editor: "number", sorter: "number"},
-        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
-        {title: "Total", field: "total", sorter: "number", mutator: totalMutator},
-        {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date"},
-        {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date"},
-        {title: "Customer", field: "customer", editor: "input", sorter: "string"},
-        {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
-        {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
+    {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
+    {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
+    {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
+    {title: "Price", field: "price", editor: "number", sorter: "number", 
+        formatter:"money", 
+        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+    },
+    {title: "Shipping", field: "shipping", editor: "number", sorter: "number", 
+        formatter:"money", 
+        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+    },
+    {title: "Fees", field: "fees", editor: "number", sorter: "number", 
+        formatter:"money", 
+        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+    },
+    {title: "Returns", field: "returns", editor: "number", sorter: "number", 
+        formatter:"money", 
+        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+    },
+    {title: "Tax", field: "tax", editor: "number", sorter: "number", 
+        formatter:"money", 
+        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+    },
+    {title: "Total", field: "total", sorter: "number", mutator: totalMutator, 
+        formatter:"money", 
+        formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+    },
+    {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date", 
+        formatter:"datetime", 
+        formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}
+    },
+    {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date", 
+        formatter:"datetime", 
+        formatterParams:{outputFormat:"MM/DD/YYYY", invalidPlaceholder:"--"}
+    },
+    {title: "Customer", field: "customer", editor: "input", sorter: "string"},
+    {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
+    {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
     ]
 });
 
