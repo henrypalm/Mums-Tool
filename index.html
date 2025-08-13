@@ -11,38 +11,45 @@
 <title>Order Tracker</title>
 <link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon" />
 <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet" />
-<link rel="stylesheet" href="/css/index-styles.css" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  body { padding: 12px; }
+  body { padding: 12px; font-family: Arial, sans-serif; background: #222; color: #fff; margin: 0; }
   .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
   #order-table { height: 520px; }
   #grand-total-bar { position: sticky; bottom: 0; background: #111; color:#fff; padding:10px 12px; font-weight:700; }
-  .btn-table-delete { padding:0 8px; line-height: 1.6; cursor:pointer; }
+  .btn-table-delete { padding:0 8px; line-height: 1.6; cursor:pointer; border-radius:4px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.06); }
+  input, button { font-size:14px; }
 
   /* Login Modal */
   #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
   #login-card { background: #fff; color:#111; padding: 20px; border-radius: 10px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
   #login-card h2 { margin: 0 0 12px; }
   .login-row { margin-bottom: 10px; }
-  .login-row input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+  .login-row input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
   .login-actions { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top: 8px; }
   .login-actions button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; }
   .btn-primary { background:#0d6efd; color:#fff; }
-  .btn-secondary { background:#e9ecef; }
+  .btn-secondary { background:#e9ecef; color:#111; }
   .btn-danger { background:#dc3545; color:#fff; }
   #login-message { min-height: 20px; color:#c0392b; margin-top: 6px; }
 
   /* WIP overlay */
   #wip-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; z-index: 5000; }
+
+  /* small helpers */
+  .hidden { display:none !important; }
 </style>
 </head>
 <body>
 
 <!-- Login Modal -->
-<div id="login-modal">
+<div id="login-modal" role="dialog" aria-modal="true" aria-label="Login">
   <div id="login-card">
-    <h2>Sign in</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <h2 style="margin:0;">Sign in</h2>
+      <button id="login-close" title="Close" style="background:transparent; border:0; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+
     <div class="login-row">
       <input id="login-email" type="email" placeholder="Email" autocomplete="username" />
     </div>
@@ -52,7 +59,7 @@
     <div class="login-actions">
       <button id="btn-login" class="btn-primary">Login</button>
       <button id="btn-register" class="btn-secondary" title="Create account">Register</button>
-      <button id="btn-logout" class="btn-danger" style="display:none;">Logout</button>
+      <button id="btn-logout" class="btn-danger hidden">Logout</button>
     </div>
     <div id="login-message"></div>
   </div>
@@ -80,7 +87,12 @@
   <button id="add-row" class="btn-add-row">Add New Row</button>
   <button id="download-csv">Export CSV</button>
   <button id="clear-orders" class="btn-clear">Clear All Orders</button>
-  <span id="auth-status" style="margin-left:auto; opacity:.85;"></span>
+
+  <!-- Login controls -->
+  <button id="open-login" style="margin-left:auto;">Sign in</button>
+  <button id="sign-out" class="hidden">Sign out</button>
+
+  <span id="auth-status" style="margin-left:12px; opacity:.85;"></span>
 </div>
 
 <div id="order-table"></div>
@@ -89,94 +101,255 @@
   Grand Total: $<span id="grand-total-value">0.00</span>
 </div>
 
+<!-- Tabulator -->
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 
-<!-- Firebase (v10+) -->
+<!-- Firebase (module) -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  // ----- Firebase imports (v12.x) -----
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
 
-  // =================== CONFIGURE ME ===================
-  // 1) Replace the placeholders below with your Firebase project config
-  // 2) In Firebase Console, enable Email/Password sign-in
-  // 3) Create a Firestore database in production/test mode (your choice)
+  // ----- YOUR firebaseConfig (from your project) -----
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyAxW43AB1-uWtYdWox3Lyk0YqlGR5K-ufM",
+    authDomain: "mums-tool-on-the-wifi.firebaseapp.com",
+    projectId: "mums-tool-on-the-wifi",
+    storageBucket: "mums-tool-on-the-wifi.firebasestorage.app",
+    messagingSenderId: "203068713227",
+    appId: "1:203068713227:web:e2059d27834fa7be015a0e",
+    measurementId: "G-LCWWMB7053"
   };
-  // ====================================================
 
+  // ----- Init Firebase -----
   const app = initializeApp(firebaseConfig);
+  // analytics can fail in some environments; wrap it
+  try { getAnalytics(app); } catch(e){ /* ignore */ }
   const auth = getAuth(app);
   const db = getFirestore(app);
   await setPersistence(auth, browserLocalPersistence);
 
-  // ---------- DOM refs ----------
+  // ----- DOM refs -----
   const loginModal = document.getElementById('login-modal');
   const loginMsg = document.getElementById('login-message');
   const emailEl = document.getElementById('login-email');
   const passEl = document.getElementById('login-password');
   const btnLogin = document.getElementById('btn-login');
   const btnRegister = document.getElementById('btn-register');
-  const btnLogout = document.getElementById('btn-logout');
+  const btnLogoutInside = document.getElementById('btn-logout');
+  const loginClose = document.getElementById('login-close');
+  const openLoginBtn = document.getElementById('open-login');
+  const signOutBtn = document.getElementById('sign-out');
   const authStatus = document.getElementById('auth-status');
 
-  // ---------- Local fallback keys ----------
+  // ----- Local fallback keys -----
   const STORAGE_KEY = "orderTrackerData";
   const GRAND_TOTAL_KEY = "orderTrackerGrandTotal";
   const TAX_RATE = 0.06;
 
-  // ---------- Tabulator setup (created immediately) ----------
-  function toISODate(val){ if(!val) return ""; if(/^\d{4}-\d{2}-\d{2}$/.test(val)) return val; const mmdd=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/; const m=String(val).match(mmdd); if(m){ const mm=m[1].padStart(2,"0"); const dd=m[2].padStart(2,"0"); const yyyy=m[3]; return `${yyyy}-${mm}-${dd}`;} const d=new Date(val); if(!isNaN(d)){ const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0"); return `${yyyy}-${mm}-${dd}`;} return ""; }
-  function toDisplayDate(val){ if(!val) return ""; if(/^\d{4}-\d{2}-\d{2}$/.test(val)){ const [y,m,d]=val.split('-'); return `${m}/${d}/${y}`;} if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val; const d=new Date(val); if(!isNaN(d)){ const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0"); const yyyy=d.getFullYear(); return `${mm}/${dd}/${yyyy}`;} return val; }
-  function sanitizeRow(row){ return { itemName: row.itemName||"", itemNumber: row.itemNumber||"", quantity: Number(row.quantity)||0, price: Number(row.price)||0, shipping: Number(row.shipping)||0, fees: Number(row.fees)||0, returns: Number(row.returns)||0, tax: Number(row.tax)||0, total: Number(row.total)||0, dateOrdered: row.dateOrdered||"", dateShipped: row.dateShipped||"", customer: row.customer||"", tracking: row.tracking||"" }; }
-  function dateEditor(cell,onRendered,success,cancel){ const input=document.createElement('input'); input.type='date'; input.style.width='100%'; input.style.boxSizing='border-box'; input.value=toISODate(cell.getValue()); onRendered(()=>input.focus()); function save(){ success(input.value||""); } input.addEventListener('blur',save); input.addEventListener('keydown',e=>{ if(e.key==='Enter') save(); else if(e.key==='Escape') cancel(); }); return input; }
-  function dateFormatter(cell){ return toDisplayDate(cell.getValue()); }
-  function removeButton(cell){ const row=cell.getRow(); const btn=document.createElement('button'); btn.textContent='−'; btn.className='btn-table-delete'; btn.addEventListener('click',()=>{ row.delete(); ensureAtLeastOneRow(); triggerSave(); updateGrandTotal(); }); return btn; }
+  // ----------------- Helpers -----------------
+  function toISODate(val) {
+    if (!val) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val; // already ISO
+    const mmdd = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;   // MM/DD/YYYY
+    const m = String(val).match(mmdd);
+    if (m) {
+      const mm = m[1].padStart(2, "0");
+      const dd = m[2].padStart(2, "0");
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    const d = new Date(val);
+    if (!isNaN(d)) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return "";
+  }
 
+  function toDisplayDate(val) {
+    if (!val) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const [y, m, d] = val.split("-");
+      return `${m}/${d}/${y}`;
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
+    const d = new Date(val);
+    if (!isNaN(d)) {
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    }
+    return val;
+  }
+
+  function sanitizeRow(row) {
+    return {
+      itemName: row.itemName || "",
+      itemNumber: row.itemNumber || "",
+      quantity: Number(row.quantity) || 0,
+      price: Number(row.price) || 0,
+      shipping: Number(row.shipping) || 0,
+      fees: Number(row.fees) || 0,
+      returns: Number(row.returns) || 0,
+      tax: Number(row.tax) || 0,
+      total: Number(row.total) || 0,
+      dateOrdered: row.dateOrdered || "",
+      dateShipped: row.dateShipped || "",
+      customer: row.customer || "",
+      tracking: row.tracking || ""
+    };
+  }
+
+  function dateEditor(cell, onRendered, success, cancel) {
+    const cellValue = cell.getValue();
+    const input = document.createElement("input");
+    input.type = "date";
+    input.style.width = "100%";
+    input.style.boxSizing = "border-box";
+    input.value = toISODate(cellValue);
+
+    onRendered(() => input.focus());
+
+    function save() { success(input.value || ""); }
+    function onKey(e) {
+      if (e.key === "Enter") save();
+      else if (e.key === "Escape") cancel();
+    }
+
+    input.addEventListener("blur", save);
+    input.addEventListener("keydown", onKey);
+
+    return input;
+  }
+
+  function dateFormatter(cell) {
+    return toDisplayDate(cell.getValue());
+  }
+
+  function removeButton(cell) {
+    const row = cell.getRow();
+    const btn = document.createElement("button");
+    btn.textContent = "−";
+    btn.className = "btn-table-delete";
+    btn.addEventListener("click", () => {
+      row.delete();
+      ensureAtLeastOneRow();
+      triggerSave();
+      updateGrandTotal();
+    });
+    return btn;
+  }
+
+  // ----------------- Tabulator data & init -----------------
   let tableData = [];
-  try { tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { tableData = []; }
-  tableData = tableData.map(r=>{ const row=sanitizeRow(r); const subtotal=row.price*row.quantity; row.tax=+(subtotal*TAX_RATE).toFixed(2); row.total=+(subtotal+row.tax+row.shipping+row.fees-row.returns).toFixed(2); return row; });
-  if(tableData.length===0) tableData=[sanitizeRow({})];
+  try {
+    tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    tableData = [];
+  }
 
-  let table = new Tabulator('#order-table', {
+  tableData = tableData.map(r => {
+    const row = sanitizeRow(r);
+    const subtotal = row.price * row.quantity;
+    row.tax = +(subtotal * TAX_RATE).toFixed(2);
+    row.total = +(subtotal + row.tax + row.shipping + row.fees - row.returns).toFixed(2);
+    return row;
+  });
+
+  if (tableData.length === 0) tableData = [sanitizeRow({})];
+
+  let table = new Tabulator("#order-table", {
     data: tableData,
-    layout: 'fitDataStretch',
+    layout: "fitDataStretch",
     movableColumns: true,
     resizableColumns: true,
     pagination: false,
     columns: [
-      {title:'Item Name', field:'itemName', editor:'input'},
-      {title:'Item #', field:'itemNumber', editor:'input'},
-      {title:'Quantity', field:'quantity', editor:'number', sorter:'number'},
-      {title:'Price', field:'price', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
-      {title:'Shipping', field:'shipping', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
-      {title:'Fees', field:'fees', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
-      {title:'Returns', field:'returns', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
-      {title:'Tax', field:'tax', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
-      {title:'Total', field:'total', sorter:'number', mutator: totalMutator, formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
-      {title:'Date Ordered', field:'dateOrdered', sorter:'date', editor: dateEditor, formatter: dateFormatter},
-      {title:'Date Shipped', field:'dateShipped', sorter:'date', editor: dateEditor, formatter: dateFormatter},
-      {title:'Customer', field:'customer', editor:'input'},
-      {title:'Tracking', field:'tracking', editor:'input'},
-      {title:'', hozAlign:'center', width:50, headerSort:false, formatter: removeButton}
+      {title:"Item Name", field:"itemName", editor:"input"},
+      {title:"Item #", field:"itemNumber", editor:"input"},
+      {title:"Quantity", field:"quantity", editor:"number", sorter:"number"},
+      {title:"Price", field:"price", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Shipping", field:"shipping", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Fees", field:"fees", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Returns", field:"returns", editor:"number", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Tax", field:"tax", sorter:"number",
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Total", field:"total", sorter:"number", mutator: totalMutator,
+        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
+      },
+      {title:"Date Ordered", field:"dateOrdered", sorter:"date",
+        editor: dateEditor, formatter: dateFormatter
+      },
+      {title:"Date Shipped", field:"dateShipped", sorter:"date",
+        editor: dateEditor, formatter: dateFormatter
+      },
+      {title:"Customer", field:"customer", editor:"input"},
+      {title:"Tracking", field:"tracking", editor:"input"},
+      {title:"", hozAlign:"center", width:50, headerSort:false, formatter: removeButton}
     ],
   });
 
-  function totalMutator(value, data){ const price=+data.price||0; const qty=+data.quantity||0; const shipping=+data.shipping||0; const fees=+data.fees||0; const returns=+data.returns||0; const subtotal=price*qty; const tax=subtotal*TAX_RATE; data.tax=+tax.toFixed(2); const total=subtotal+tax+shipping+fees-returns; return +total.toFixed(2); }
+  function totalMutator(value, data) {
+    const price = +data.price || 0;
+    const qty = +data.quantity || 0;
+    const shipping = +data.shipping || 0;
+    const fees = +data.fees || 0;
+    const returns = +data.returns || 0;
 
-  table.on('cellEdited', ()=>{ triggerSave(); updateGrandTotal(); });
-  table.on('rowDeleted', ()=>{ ensureAtLeastOneRow(); triggerSave(); updateGrandTotal(); });
+    const subtotal = price * qty;
+    const tax = subtotal * TAX_RATE;
+    data.tax = +tax.toFixed(2); // keep tax in-sync
+    const total = subtotal + tax + shipping + fees - returns;
+    return +total.toFixed(2);
+  }
 
-  function ensureAtLeastOneRow(){ if(table.getData().length===0){ table.addRow(sanitizeRow({})); } }
+  table.on("cellEdited", () => {
+    triggerSave();
+    updateGrandTotal();
+  });
 
-  function updateGrandTotal(){ const data=table.getData(); const grand=data.reduce((sum,r)=> sum + (+r.total||0), 0); const val=grand.toFixed(2); document.getElementById('grand-total-value').textContent = val; localStorage.setItem(GRAND_TOTAL_KEY, val); }
+  table.on("rowDeleted", () => {
+    ensureAtLeastOneRow();
+    triggerSave();
+    updateGrandTotal();
+  });
+
+  function ensureAtLeastOneRow() {
+    if (table.getData().length === 0) {
+      table.addRow(sanitizeRow({}));
+    }
+  }
+
+  function updateGrandTotal() {
+    const data = table.getData();
+    const grand = data.reduce((sum, r) => sum + (+r.total || 0), 0);
+    const val = grand.toFixed(2);
+    document.getElementById("grand-total-value").textContent = val;
+    localStorage.setItem(GRAND_TOTAL_KEY, val);
+  }
 
   const savedGrand = localStorage.getItem(GRAND_TOTAL_KEY);
-  if(savedGrand!=null){ document.getElementById('grand-total-value').textContent = parseFloat(savedGrand).toFixed(2); } else { updateGrandTotal(); }
+  if (savedGrand != null) {
+    document.getElementById("grand-total-value").textContent = parseFloat(savedGrand).toFixed(2);
+  } else {
+    updateGrandTotal();
+  }
+
   ensureAtLeastOneRow();
   updateGrandTotal();
 
@@ -191,35 +364,49 @@
     const user = auth.currentUser;
     const data = table.getData().map(sanitizeRow);
     if(user){
-      // Save to Firestore under orders/{uid}
-      await setDoc(doc(db, 'orders', user.uid), { orders: data, updatedAt: Date.now() });
+      try {
+        await setDoc(doc(db, 'orders', user.uid), { orders: data, updatedAt: Date.now() });
+      } catch(err){
+        console.error("Failed to save to Firestore:", err);
+      }
     }
     // Always mirror locally as a cache for faster startup
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e){ console.warn("localStorage write failed", e); }
   }
 
   async function loadRemoteData(uid){
-    const snap = await getDoc(doc(db, 'orders', uid));
-    if(snap.exists()){
-      const remote = snap.data().orders || [];
-      const normalized = remote.map(r=>({ ...r, dateOrdered: toISODate(r.dateOrdered), dateShipped: toISODate(r.dateShipped) }));
-      await table.setData(normalized);
-    } else {
-      // initialize with single empty row
-      await table.setData([sanitizeRow({})]);
-      await saveData();
+    try {
+      const snap = await getDoc(doc(db, 'orders', uid));
+      if(snap.exists()){
+        const remote = snap.data().orders || [];
+        const normalized = remote.map(r=>({ ...r, dateOrdered: toISODate(r.dateOrdered), dateShipped: toISODate(r.dateShipped) }));
+        await table.setData(normalized);
+      } else {
+        // initialize with single empty row and create doc
+        await table.setData([sanitizeRow({})]);
+        await saveData();
+      }
+      updateGrandTotal();
+    } catch(err){
+      console.error("Failed to load remote data:", err);
     }
-    updateGrandTotal();
   }
 
   // ---------- Auth UI logic ----------
-  function showLogin(){ loginModal.style.display='flex'; btnLogout.style.display='none'; authStatus.textContent='Signed out'; }
-  function hideLogin(){ loginModal.style.display='none'; btnLogout.style.display='inline-block'; }
+  function openLoginModal(){ loginModal.style.display = 'flex'; loginMsg.textContent = ''; }
+  function closeLoginModal(){ loginModal.style.display = 'none'; loginMsg.textContent = ''; }
+
+  openLoginBtn.addEventListener('click', () => openLoginModal());
+  loginClose.addEventListener('click', () => closeLoginModal());
+  // click outside modal to close:
+  loginModal.addEventListener('click', (ev) => { if (ev.target === loginModal) closeLoginModal(); });
 
   btnLogin.addEventListener('click', async ()=>{
     LoginMessage('');
     try{
       await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+      closeLoginModal();
+      passEl.value = '';
     }catch(err){
       LoginMessage(parseAuthError(err));
     }
@@ -229,12 +416,18 @@
     LoginMessage('');
     try{
       await createUserWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+      closeLoginModal();
+      passEl.value = '';
     }catch(err){
       LoginMessage(parseAuthError(err));
     }
   });
 
-  btnLogout.addEventListener('click', async ()=>{
+  btnLogoutInside.addEventListener('click', async ()=>{
+    await signOut(auth);
+  });
+
+  signOutBtn.addEventListener('click', async ()=>{
     await signOut(auth);
   });
 
@@ -246,28 +439,41 @@
       case 'auth/user-not-found': return 'User not found';
       case 'auth/email-already-in-use': return 'Email already in use';
       case 'auth/weak-password': return 'Weak password (use 6+ chars)';
-      default: return 'Authentication error';
+      case 'auth/wrong-password': return 'Incorrect password';
+      default: return (err && err.message) ? err.message : 'Authentication error';
     }
   }
 
   onAuthStateChanged(auth, async (user)=>{
     if(user){
-      hideLogin();
+      // signed in
+      closeLoginModal();
       authStatus.textContent = `Signed in as ${user.email}`;
+      openLoginBtn.classList.add('hidden');
+      signOutBtn.classList.remove('hidden');
+      btnLogoutInside.classList.remove('hidden');
       await loadRemoteData(user.uid);
     } else {
-      showLogin();
-      // keep local cache visible so page isn't empty when signed out
+      // signed out: show local cached data and allow login when user chooses
+      authStatus.textContent = 'Signed out';
+      openLoginBtn.classList.remove('hidden');
+      signOutBtn.classList.add('hidden');
+      btnLogoutInside.classList.add('hidden');
+
       const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if(cached.length){ table.setData(cached); updateGrandTotal(); }
     }
   });
 
-  // ---------- Controls (unchanged, but save now goes remote when signed in) ----------
-  document.getElementById('add-row').addEventListener('click', ()=>{ table.addRow(sanitizeRow({})); triggerSave(); updateGrandTotal(); });
+  // ---------- Controls ----------
+  document.getElementById('add-row').addEventListener('click', () => {
+    table.addRow(sanitizeRow({}));
+    triggerSave();
+    updateGrandTotal();
+  });
 
-  document.getElementById('clear-orders').addEventListener('click', ()=>{
-    if(confirm('Are you sure you want to clear all orders? This cannot be undone.')){
+  document.getElementById('clear-orders').addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all orders? This cannot be undone.')) {
       table.clearData();
       ensureAtLeastOneRow();
       triggerSave();
@@ -275,24 +481,30 @@
     }
   });
 
-  document.getElementById('filter-customer').addEventListener('input', function(){ const val=this.value.trim(); val ? table.setFilter('customer','like',val) : table.clearFilter(); });
+  document.getElementById('filter-customer').addEventListener('input', function () {
+    const val = this.value.trim();
+    val ? table.setFilter('customer', 'like', val) : table.clearFilter();
+  });
 
-  document.getElementById('download-csv').addEventListener('click', ()=>{ table.download('csv','orders.csv'); });
+  document.getElementById('download-csv').addEventListener('click', () => {
+    table.download('csv', 'orders.csv');
+  });
 
-  document.getElementById('upload-csv').addEventListener('change', function(e){
-    const file = e.target.files[0]; if(!file) return;
+  document.getElementById('upload-csv').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
-    reader.onload = async function(ev){
+    reader.onload = async function (ev) {
       const csv = ev.target.result;
       const parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
       await table.setData(parsed);
-      const normalized = table.getData().map(r=>({ ...r, dateOrdered: toISODate(r.dateOrdered), dateShipped: toISODate(r.dateShipped) }));
+      const normalized = table.getData().map(r => ({ ...r, dateOrdered: toISODate(r.dateOrdered), dateShipped: toISODate(r.dateShipped) }));
       await table.setData(normalized);
       triggerSave();
       updateGrandTotal();
     };
     reader.readAsText(file);
-    e.target.value = '';
+    e.target.value = "";
   });
 
   // ---------- WIP overlay ----------
@@ -305,6 +517,10 @@
     if(dontShow){ localStorage.setItem(WIP_KEY, 'true'); }
     document.getElementById('wip-overlay').style.display = 'none';
   }
+
+  // expose saveData for debugging if needed
+  window._saveData = saveData;
+
 </script>
 </body>
 </html>
