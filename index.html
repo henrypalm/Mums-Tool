@@ -30,8 +30,9 @@ function calcTotal(value, data) {
     return total.toFixed(2);
 }
 
-// Sample data
+// Table data
 let tableData = [
+    // Sample data
     {price: 10, tax: 1, shipping: 2, fees: 0.5, quantity: 2, itemName: "Widget A", itemNumber: "A001", returns: 0, comments: "", dateOrdered: "2025-08-01", dateShipped: "2025-08-03", customer: "John Doe", tracking: "TRK123"},
     {price: 20, tax: 2, shipping: 3, fees: 1, quantity: 1, itemName: "Widget B", itemNumber: "B002", returns: 0, comments: "", dateOrdered: "2025-08-02", dateShipped: "2025-08-04", customer: "Jane Smith", tracking: "TRK456"}
 ];
@@ -45,13 +46,13 @@ let table = new Tabulator("#table-container", {
     resizableColumns: true,
     pagination: false,
     columns: [
-        {title: "Price", field: "price", editor: "number", sorter: "number"},
-        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
-        {title: "Shipping", field: "shipping", editor: "number", sorter: "number"},
-        {title: "Fees", field: "fees", editor: "number", sorter: "number"},
-        {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
         {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
         {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
+        {title: "Price", field: "price", editor: "number", sorter: "number"},
+        {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
+        {title: "Shipping", field: "shipping", editor: "number", sorter: "number"},
+        {title: "Fees", field: "fees", editor: "number", sorter: "number"},
+        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
         {title: "Returns", field: "returns", editor: "number", sorter: "number"},
         {title: "Comments", field: "comments", editor: "input"},
         {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date"},
