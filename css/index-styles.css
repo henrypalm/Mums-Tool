@@ -41,14 +41,48 @@ body {
 /* =============================
    Table Container
 ============================= */
-.table-container {
+#table-container {
     flex: 1;
-    overflow: auto;
+    overflow-x: auto; /* allow horizontal scroll on small screens */
 }
 
 /* Highlight row on hover for visibility */
 .tabulator-row:hover {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* =============================
+   Table Buttons
+============================= */
+.btn-table-delete {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 0 6px;
+    font-weight: bold;
+    border-radius: 3px;
+}
+
+.btn-table-delete:hover {
+    background-color: #c0392b;
+}
+
+/* =============================
+   Add New Row Button
+============================= */
+.btn-add-row {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 3px;
+    margin-top: 5px; /* spacing below file input */
+}
+
+.btn-add-row:hover {
+    background-color: #2980b9;
 }
 
 /* =============================
@@ -95,20 +129,6 @@ input, button, select {
     background-color: #c0392b;
 }
 
-/* Add New Row button */
-.btn-add-row {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 3px;
-}
-
-.btn-add-row:hover {
-    background-color: #2980b9;
-}
-
 /* =============================
    Table + / − Buttons
 ============================= */
@@ -125,7 +145,7 @@ input, button, select {
     line-height: 1.2;
 }
 
-/* Green "+" Button */
+/* Green "+" Button (not used now, for reference) */
 .btn-table-add {
     background-color: #2ecc71;
 }
@@ -134,11 +154,25 @@ input, button, select {
     background-color: #27ae60;
 }
 
-/* Red "−" Button */
-.btn-table-delete {
-    background-color: #e74c3c;
-}
+/* =============================
+   Responsive / Mobile
+============================= */
+@media (max-width: 768px) {
+    .controls {
+        flex-direction: column; /* stack controls vertically */
+    }
 
-.btn-table-delete:hover {
-    background-color: #c0392b;
+    input, button {
+        width: 100%; /* full width for easier tapping */
+        font-size: 16px;
+        padding: 8px;
+    }
+
+    .tabulator-row {
+        font-size: 14px; /* slightly larger for mobile */
+    }
+
+    #table-container .tabulator {
+        height: auto; /* table grows with content on mobile */
+    }
 }
