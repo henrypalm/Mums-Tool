@@ -10,12 +10,13 @@
 
 <h1>Order Tracker</h1>
 
-<div class="controls">
+<<div class="controls">
   <label>
     Filter by Customer:
     <input id="filter-customer" type="text" placeholder="Type name...">
   </label>
   <button id="download-csv">Export CSV</button>
+  <button id="clear-orders">Clear All Orders</button>
   <input type="file" id="upload-csv" accept=".csv">
 </div>
 
@@ -99,6 +100,15 @@ document.getElementById("upload-csv").addEventListener("change", function(e){
     };
     reader.readAsText(file);
 });
+
+// Clear all orders
+document.getElementById("clear-orders").addEventListener("click", function(){
+    if(confirm("Are you sure you want to clear all orders? This cannot be undone.")){
+        localStorage.removeItem(STORAGE_KEY);
+        table.clearData();
+    }
+});
+
 </script>
 </body>
 </html>
