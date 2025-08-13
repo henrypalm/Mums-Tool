@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <meta property="og:title" content="Mum's Furniture Catalog" />
 <meta property="og:description" content="A clean and cozy furniture cataloging tool for my mom." />
 <meta property="og:image" content="https://mumstool.onthewifi.com/imgs/MumsToolPreview.png" />
@@ -19,9 +19,44 @@
   #order-table { height: 520px; }
   #grand-total-bar { position: sticky; bottom: 0; background: #111; color:#fff; padding:10px 12px; font-weight:700; }
   .btn-table-delete { padding:0 8px; line-height: 1.6; cursor:pointer; }
+
+  /* Login Modal */
+  #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
+  #login-card { background: #fff; color:#111; padding: 20px; border-radius: 10px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+  #login-card h2 { margin: 0 0 12px; }
+  .login-row { margin-bottom: 10px; }
+  .login-row input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+  .login-actions { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top: 8px; }
+  .login-actions button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; }
+  .btn-primary { background:#0d6efd; color:#fff; }
+  .btn-secondary { background:#e9ecef; }
+  .btn-danger { background:#dc3545; color:#fff; }
+  #login-message { min-height: 20px; color:#c0392b; margin-top: 6px; }
+
+  /* WIP overlay */
+  #wip-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; z-index: 5000; }
 </style>
 </head>
 <body>
+
+<!-- Login Modal -->
+<div id="login-modal">
+  <div id="login-card">
+    <h2>Sign in</h2>
+    <div class="login-row">
+      <input id="login-email" type="email" placeholder="Email" autocomplete="username" />
+    </div>
+    <div class="login-row">
+      <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" />
+    </div>
+    <div class="login-actions">
+      <button id="btn-login" class="btn-primary">Login</button>
+      <button id="btn-register" class="btn-secondary" title="Create account">Register</button>
+      <button id="btn-logout" class="btn-danger" style="display:none;">Logout</button>
+    </div>
+    <div id="login-message"></div>
+  </div>
+</div>
 
 <!-- WIP Overlay -->
 <div id="wip-overlay">
@@ -34,20 +69,6 @@
   <button onclick="closeWIP()">OK, got it</button>
 </div>
 
-<script>
-const WIP_KEY = "wipDismissed";
-if(localStorage.getItem(WIP_KEY) === "true"){
-  document.getElementById("wip-overlay").style.display = "none";
-}
-function closeWIP() {
-  const dontShow = document.getElementById("wip-dont-show").checked;
-  if(dontShow){
-    localStorage.setItem(WIP_KEY, "true");
-  }
-  document.getElementById("wip-overlay").style.display = "none";
-}
-</script>
-
 <h1>Order Tracker</h1>
 
 <div class="controls">
@@ -59,6 +80,7 @@ function closeWIP() {
   <button id="add-row" class="btn-add-row">Add New Row</button>
   <button id="download-csv">Export CSV</button>
   <button id="clear-orders" class="btn-clear">Clear All Orders</button>
+  <span id="auth-status" style="margin-left:auto; opacity:.85;"></span>
 </div>
 
 <div id="order-table"></div>
@@ -68,290 +90,221 @@ function closeWIP() {
 </div>
 
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
-<script>
-  // ----------------- Constants & Storage -----------------
+
+<!-- Firebase (v10+) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  // =================== CONFIGURE ME ===================
+  // 1) Replace the placeholders below with your Firebase project config
+  // 2) In Firebase Console, enable Email/Password sign-in
+  // 3) Create a Firestore database in production/test mode (your choice)
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    appId: "YOUR_APP_ID"
+  };
+  // ====================================================
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  await setPersistence(auth, browserLocalPersistence);
+
+  // ---------- DOM refs ----------
+  const loginModal = document.getElementById('login-modal');
+  const loginMsg = document.getElementById('login-message');
+  const emailEl = document.getElementById('login-email');
+  const passEl = document.getElementById('login-password');
+  const btnLogin = document.getElementById('btn-login');
+  const btnRegister = document.getElementById('btn-register');
+  const btnLogout = document.getElementById('btn-logout');
+  const authStatus = document.getElementById('auth-status');
+
+  // ---------- Local fallback keys ----------
   const STORAGE_KEY = "orderTrackerData";
   const GRAND_TOTAL_KEY = "orderTrackerGrandTotal";
   const TAX_RATE = 0.06;
 
-  // ----------------- Helpers -----------------
-  // Convert various date inputs to ISO YYYY-MM-DD (what <input type="date"> expects)
-  function toISODate(val) {
-    if (!val) return "";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val; // already ISO
-    const mmdd = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;   // MM/DD/YYYY
-    const m = String(val).match(mmdd);
-    if (m) {
-      const mm = m[1].padStart(2, "0");
-      const dd = m[2].padStart(2, "0");
-      const yyyy = m[3];
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    // Fallback: try Date parsing (may be locale-sensitive)
-    const d = new Date(val);
-    if (!isNaN(d)) {
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    return "";
-  }
+  // ---------- Tabulator setup (created immediately) ----------
+  function toISODate(val){ if(!val) return ""; if(/^\d{4}-\d{2}-\d{2}$/.test(val)) return val; const mmdd=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/; const m=String(val).match(mmdd); if(m){ const mm=m[1].padStart(2,"0"); const dd=m[2].padStart(2,"0"); const yyyy=m[3]; return `${yyyy}-${mm}-${dd}`;} const d=new Date(val); if(!isNaN(d)){ const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0"); return `${yyyy}-${mm}-${dd}`;} return ""; }
+  function toDisplayDate(val){ if(!val) return ""; if(/^\d{4}-\d{2}-\d{2}$/.test(val)){ const [y,m,d]=val.split('-'); return `${m}/${d}/${y}`;} if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val; const d=new Date(val); if(!isNaN(d)){ const mm=String(d.getMonth()+1).padStart(2,"0"); const dd=String(d.getDate()).padStart(2,"0"); const yyyy=d.getFullYear(); return `${mm}/${dd}/${yyyy}`;} return val; }
+  function sanitizeRow(row){ return { itemName: row.itemName||"", itemNumber: row.itemNumber||"", quantity: Number(row.quantity)||0, price: Number(row.price)||0, shipping: Number(row.shipping)||0, fees: Number(row.fees)||0, returns: Number(row.returns)||0, tax: Number(row.tax)||0, total: Number(row.total)||0, dateOrdered: row.dateOrdered||"", dateShipped: row.dateShipped||"", customer: row.customer||"", tracking: row.tracking||"" }; }
+  function dateEditor(cell,onRendered,success,cancel){ const input=document.createElement('input'); input.type='date'; input.style.width='100%'; input.style.boxSizing='border-box'; input.value=toISODate(cell.getValue()); onRendered(()=>input.focus()); function save(){ success(input.value||""); } input.addEventListener('blur',save); input.addEventListener('keydown',e=>{ if(e.key==='Enter') save(); else if(e.key==='Escape') cancel(); }); return input; }
+  function dateFormatter(cell){ return toDisplayDate(cell.getValue()); }
+  function removeButton(cell){ const row=cell.getRow(); const btn=document.createElement('button'); btn.textContent='−'; btn.className='btn-table-delete'; btn.addEventListener('click',()=>{ row.delete(); ensureAtLeastOneRow(); triggerSave(); updateGrandTotal(); }); return btn; }
 
-  // Display date as MM/DD/YYYY from ISO or pass-through MM/DD/YYYY
-  function toDisplayDate(val) {
-    if (!val) return "";
-    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      const [y, m, d] = val.split("-");
-      return `${m}/${d}/${y}`;
-    }
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) return val;
-    const d = new Date(val);
-    if (!isNaN(d)) {
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      const yyyy = d.getFullYear();
-      return `${mm}/${dd}/${yyyy}`;
-    }
-    return val;
-  }
-
-  // Sanitize row fields so math/formatters never blow up
-  function sanitizeRow(row) {
-    return {
-      itemName: row.itemName || "",
-      itemNumber: row.itemNumber || "",
-      quantity: Number(row.quantity) || 0,
-      price: Number(row.price) || 0,
-      shipping: Number(row.shipping) || 0,
-      fees: Number(row.fees) || 0,
-      returns: Number(row.returns) || 0,
-      tax: Number(row.tax) || 0,
-      total: Number(row.total) || 0,
-      dateOrdered: row.dateOrdered || "",
-      dateShipped: row.dateShipped || "",
-      customer: row.customer || "",
-      tracking: row.tracking || ""
-    };
-  }
-
-  // Custom date editor using <input type="date">
-  function dateEditor(cell, onRendered, success, cancel) {
-    const cellValue = cell.getValue();
-    const input = document.createElement("input");
-    input.type = "date";
-    input.style.width = "100%";
-    input.style.boxSizing = "border-box";
-    input.value = toISODate(cellValue);
-
-    onRendered(() => input.focus());
-
-    function save() { success(input.value || ""); }
-    function onKey(e) {
-      if (e.key === "Enter") save();
-      else if (e.key === "Escape") cancel();
-    }
-
-    input.addEventListener("blur", save);
-    input.addEventListener("keydown", onKey);
-
-    return input;
-  }
-
-  // Custom date formatter (MM/DD/YYYY)
-  function dateFormatter(cell) {
-    return toDisplayDate(cell.getValue());
-  }
-
-  // Per-row delete button
-  function removeButton(cell) {
-    const row = cell.getRow();
-    const btn = document.createElement("button");
-    btn.textContent = "−";
-    btn.className = "btn-table-delete";
-    btn.addEventListener("click", () => {
-      row.delete();
-      ensureAtLeastOneRow();
-      saveData();
-      updateGrandTotal();
-    });
-    return btn;
-  }
-
-  // ----------------- Load data & precompute -----------------
   let tableData = [];
-  try {
-    tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
-    tableData = [];
-  }
+  try { tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { tableData = []; }
+  tableData = tableData.map(r=>{ const row=sanitizeRow(r); const subtotal=row.price*row.quantity; row.tax=+(subtotal*TAX_RATE).toFixed(2); row.total=+(subtotal+row.tax+row.shipping+row.fees-row.returns).toFixed(2); return row; });
+  if(tableData.length===0) tableData=[sanitizeRow({})];
 
-  // Precompute totals/tax on load (so saved rows show formatted values immediately)
-  tableData = tableData.map(r => {
-    const row = sanitizeRow(r);
-    const subtotal = row.price * row.quantity;
-    row.tax = +(subtotal * TAX_RATE).toFixed(2);
-    row.total = +(subtotal + row.tax + row.shipping + row.fees - row.returns).toFixed(2);
-    return row;
-  });
-
-  // If nothing saved, start with one blank row
-  if (tableData.length === 0) tableData = [sanitizeRow({})];
-
-  // ----------------- Table -----------------
-  let table = new Tabulator("#order-table", {
+  let table = new Tabulator('#order-table', {
     data: tableData,
-    layout: "fitDataStretch",
+    layout: 'fitDataStretch',
     movableColumns: true,
     resizableColumns: true,
     pagination: false,
     columns: [
-      {title:"Item Name", field:"itemName", editor:"input"},
-      {title:"Item #", field:"itemNumber", editor:"input"},
-      {title:"Quantity", field:"quantity", editor:"number", sorter:"number"},
-      {title:"Price", field:"price", editor:"number", sorter:"number",
-        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-      },
-      {title:"Shipping", field:"shipping", editor:"number", sorter:"number",
-        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-      },
-      {title:"Fees", field:"fees", editor:"number", sorter:"number",
-        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-      },
-      {title:"Returns", field:"returns", editor:"number", sorter:"number",
-        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-      },
-      {title:"Tax", field:"tax", sorter:"number",
-        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-      },
-      {title:"Total", field:"total", sorter:"number", mutator: totalMutator,
-        formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
-      },
-      {title:"Date Ordered", field:"dateOrdered", sorter:"date",
-        editor: dateEditor, formatter: dateFormatter
-      },
-      {title:"Date Shipped", field:"dateShipped", sorter:"date",
-        editor: dateEditor, formatter: dateFormatter
-      },
-      {title:"Customer", field:"customer", editor:"input"},
-      {title:"Tracking", field:"tracking", editor:"input"},
-      {title:"", hozAlign:"center", width:50, headerSort:false, formatter: removeButton}
+      {title:'Item Name', field:'itemName', editor:'input'},
+      {title:'Item #', field:'itemNumber', editor:'input'},
+      {title:'Quantity', field:'quantity', editor:'number', sorter:'number'},
+      {title:'Price', field:'price', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
+      {title:'Shipping', field:'shipping', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
+      {title:'Fees', field:'fees', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
+      {title:'Returns', field:'returns', editor:'number', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
+      {title:'Tax', field:'tax', sorter:'number', formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
+      {title:'Total', field:'total', sorter:'number', mutator: totalMutator, formatter:'money', formatterParams:{symbol:'$', precision:2, thousand:',', decimal:'.'}},
+      {title:'Date Ordered', field:'dateOrdered', sorter:'date', editor: dateEditor, formatter: dateFormatter},
+      {title:'Date Shipped', field:'dateShipped', sorter:'date', editor: dateEditor, formatter: dateFormatter},
+      {title:'Customer', field:'customer', editor:'input'},
+      {title:'Tracking', field:'tracking', editor:'input'},
+      {title:'', hozAlign:'center', width:50, headerSort:false, formatter: removeButton}
     ],
   });
 
-  // Calculate row total & tax via mutator when row data changes
-  function totalMutator(value, data) {
-    const price = +data.price || 0;
-    const qty = +data.quantity || 0;
-    const shipping = +data.shipping || 0;
-    const fees = +data.fees || 0;
-    const returns = +data.returns || 0;
+  function totalMutator(value, data){ const price=+data.price||0; const qty=+data.quantity||0; const shipping=+data.shipping||0; const fees=+data.fees||0; const returns=+data.returns||0; const subtotal=price*qty; const tax=subtotal*TAX_RATE; data.tax=+tax.toFixed(2); const total=subtotal+tax+shipping+fees-returns; return +total.toFixed(2); }
 
-    const subtotal = price * qty;
-    const tax = subtotal * TAX_RATE;
-    data.tax = +tax.toFixed(2); // keep tax in-sync
-    const total = subtotal + tax + shipping + fees - returns;
-    return +total.toFixed(2);
-  }
+  table.on('cellEdited', ()=>{ triggerSave(); updateGrandTotal(); });
+  table.on('rowDeleted', ()=>{ ensureAtLeastOneRow(); triggerSave(); updateGrandTotal(); });
 
-  // Recalculate + save whenever any editable cell changes
-  table.on("cellEdited", (cell) => {
-    // force re-run of mutators for the row
-    cell.getRow().update({});
-    saveData();
-    updateGrandTotal();
-  });
+  function ensureAtLeastOneRow(){ if(table.getData().length===0){ table.addRow(sanitizeRow({})); } }
 
-  // After rows are deleted, keep at least one
-  table.on("rowDeleted", () => {
-    ensureAtLeastOneRow();
-    saveData();
-    updateGrandTotal();
-  });
+  function updateGrandTotal(){ const data=table.getData(); const grand=data.reduce((sum,r)=> sum + (+r.total||0), 0); const val=grand.toFixed(2); document.getElementById('grand-total-value').textContent = val; localStorage.setItem(GRAND_TOTAL_KEY, val); }
 
-  // ----------------- Persistence & Totals -----------------
-  function saveData() {
-    const data = table.getData().map(sanitizeRow);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  function updateGrandTotal() {
-    const data = table.getData();
-    const grand = data.reduce((sum, r) => sum + (+r.total || 0), 0);
-    const val = grand.toFixed(2);
-    document.getElementById("grand-total-value").textContent = val;
-    localStorage.setItem(GRAND_TOTAL_KEY, val);
-  }
-
-  function ensureAtLeastOneRow() {
-    if (table.getData().length === 0) {
-      table.addRow(sanitizeRow({}));
-    }
-  }
-
-  // Initialize grand total display from storage, or compute it
   const savedGrand = localStorage.getItem(GRAND_TOTAL_KEY);
-  if (savedGrand != null) {
-    document.getElementById("grand-total-value").textContent = parseFloat(savedGrand).toFixed(2);
-  } else {
-    updateGrandTotal();
-  }
-
-  // Make sure there's always a row
+  if(savedGrand!=null){ document.getElementById('grand-total-value').textContent = parseFloat(savedGrand).toFixed(2); } else { updateGrandTotal(); }
   ensureAtLeastOneRow();
   updateGrandTotal();
 
-  // ----------------- Controls -----------------
-  document.getElementById("add-row").addEventListener("click", () => {
-    table.addRow(sanitizeRow({}));
-    saveData();
+  // ---------- Remote save/load with debounce ----------
+  let saveTimer = null;
+  function triggerSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{ saveData(); }, 500);
+  }
+
+  async function saveData(){
+    const user = auth.currentUser;
+    const data = table.getData().map(sanitizeRow);
+    if(user){
+      // Save to Firestore under orders/{uid}
+      await setDoc(doc(db, 'orders', user.uid), { orders: data, updatedAt: Date.now() });
+    }
+    // Always mirror locally as a cache for faster startup
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  async function loadRemoteData(uid){
+    const snap = await getDoc(doc(db, 'orders', uid));
+    if(snap.exists()){
+      const remote = snap.data().orders || [];
+      const normalized = remote.map(r=>({ ...r, dateOrdered: toISODate(r.dateOrdered), dateShipped: toISODate(r.dateShipped) }));
+      await table.setData(normalized);
+    } else {
+      // initialize with single empty row
+      await table.setData([sanitizeRow({})]);
+      await saveData();
+    }
     updateGrandTotal();
+  }
+
+  // ---------- Auth UI logic ----------
+  function showLogin(){ loginModal.style.display='flex'; btnLogout.style.display='none'; authStatus.textContent='Signed out'; }
+  function hideLogin(){ loginModal.style.display='none'; btnLogout.style.display='inline-block'; }
+
+  btnLogin.addEventListener('click', async ()=>{
+    LoginMessage('');
+    try{
+      await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+    }catch(err){
+      LoginMessage(parseAuthError(err));
+    }
   });
 
-  document.getElementById("clear-orders").addEventListener("click", () => {
-    if (confirm("Are you sure you want to clear all orders? This cannot be undone.")) {
-      localStorage.removeItem(STORAGE_KEY);
+  btnRegister.addEventListener('click', async ()=>{
+    LoginMessage('');
+    try{
+      await createUserWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+    }catch(err){
+      LoginMessage(parseAuthError(err));
+    }
+  });
+
+  btnLogout.addEventListener('click', async ()=>{
+    await signOut(auth);
+  });
+
+  function LoginMessage(msg){ loginMsg.textContent = msg; }
+  function parseAuthError(err){
+    const code = (err && err.code) ? err.code : '';
+    switch(code){
+      case 'auth/invalid-credential': return 'Invalid email or password';
+      case 'auth/user-not-found': return 'User not found';
+      case 'auth/email-already-in-use': return 'Email already in use';
+      case 'auth/weak-password': return 'Weak password (use 6+ chars)';
+      default: return 'Authentication error';
+    }
+  }
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(user){
+      hideLogin();
+      authStatus.textContent = `Signed in as ${user.email}`;
+      await loadRemoteData(user.uid);
+    } else {
+      showLogin();
+      // keep local cache visible so page isn't empty when signed out
+      const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if(cached.length){ table.setData(cached); updateGrandTotal(); }
+    }
+  });
+
+  // ---------- Controls (unchanged, but save now goes remote when signed in) ----------
+  document.getElementById('add-row').addEventListener('click', ()=>{ table.addRow(sanitizeRow({})); triggerSave(); updateGrandTotal(); });
+
+  document.getElementById('clear-orders').addEventListener('click', ()=>{
+    if(confirm('Are you sure you want to clear all orders? This cannot be undone.')){
       table.clearData();
       ensureAtLeastOneRow();
-      saveData();
+      triggerSave();
       updateGrandTotal();
     }
   });
 
-  document.getElementById("filter-customer").addEventListener("input", function () {
-    const val = this.value.trim();
-    val ? table.setFilter("customer", "like", val) : table.clearFilter();
-  });
+  document.getElementById('filter-customer').addEventListener('input', function(){ const val=this.value.trim(); val ? table.setFilter('customer','like',val) : table.clearFilter(); });
 
-  document.getElementById("download-csv").addEventListener("click", () => {
-    table.download("csv", "orders.csv");
-  });
+  document.getElementById('download-csv').addEventListener('click', ()=>{ table.download('csv','orders.csv'); });
 
-  // NOTE: this uses Tabulator's internal CSV loader (works with 5.5.0 as in your original code)
-  document.getElementById("upload-csv").addEventListener("change", function (e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  document.getElementById('upload-csv').addEventListener('change', function(e){
+    const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    reader.onload = function (ev) {
+    reader.onload = async function(ev){
       const csv = ev.target.result;
       const parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
-      table.setData(parsed).then(() => {
-        // Normalize dates into ISO for the date editor, then save & update totals
-        const normalized = table.getData().map(r => ({
-          ...r,
-          dateOrdered: toISODate(r.dateOrdered),
-          dateShipped: toISODate(r.dateShipped),
-        }));
-        table.setData(normalized).then(() => {
-          saveData();
-          updateGrandTotal();
-        });
-      });
+      await table.setData(parsed);
+      const normalized = table.getData().map(r=>({ ...r, dateOrdered: toISODate(r.dateOrdered), dateShipped: toISODate(r.dateShipped) }));
+      await table.setData(normalized);
+      triggerSave();
+      updateGrandTotal();
     };
     reader.readAsText(file);
-    // reset input so same file can be selected again later
-    e.target.value = "";
+    e.target.value = '';
   });
+
+  // ---------- WIP overlay ----------
+  const WIP_KEY = 'wipDismissed';
+  if(localStorage.getItem(WIP_KEY) === 'true'){
+    document.getElementById('wip-overlay').style.display = 'none';
+  }
+  window.closeWIP = function(){
+    const dontShow = document.getElementById('wip-dont-show').checked;
+    if(dontShow){ localStorage.setItem(WIP_KEY, 'true'); }
+    document.getElementById('wip-overlay').style.display = 'none';
+  }
 </script>
 </body>
 </html>
