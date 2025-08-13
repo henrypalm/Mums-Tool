@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta property="og:title" content="Mum's Furniture Catalog" />
+<meta property="og:description" content="A clean and cozy furniture cataloging tool for my mom." />
+<meta property="og:image" content="https://mumstool.onthewifi.com/imgs/MumsToolPreview.png" />
+<meta property="og:url" content="https://mumstool.onthewifi.com/" />
+<meta property="og:type" content="website" />
+  
+<title>Item Tracker</title>
+<link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon">  
+<link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet">
+<link rel="stylesheet" href="/css/index-styles.css" />
+</head>
+<body>
+
+<div id="wip-overlay">
+  <span>🚧 Work in Progress 🚧</span>
+  <p>This page is currently under construction. Features may not be complete.</p>
+  <label>
+    <input type="checkbox" id="wip-dont-show"> Don't show this again
+  </label>
+  <br>
+  <button onclick="closeWIP()">OK, got it</button>
+</div>
+
+<script>
+  const WIP_KEY = "wipDismissed";
+
+  // Hide overlay if user previously dismissed
+  if(localStorage.getItem(WIP_KEY) === "true"){
+    document.getElementById("wip-overlay").style.display = "none";
+  }
+
+  function closeWIP() {
+    // Save checkbox state
+    const dontShow = document.getElementById("wip-dont-show").checked;
+    if(dontShow){
+      localStorage.setItem(WIP_KEY, "true");
+    }
+    document.getElementById("wip-overlay").style.display = "none";
+  }
+</script>
+
+<div class="header-container">
+  <h1>Order Tracker</h1>
+  
+  <div class="controls">
+    <label>
+      Filter by Customer:
+      <input id="filter-customer" type="text" placeholder="Type name...">
+    </label>
+    <input type="file" id="upload-csv" accept=".csv">
+    <button id="add-row" class="btn-add-row">Add New Row</button>
+    <button id="download-csv">Export CSV</button>
+    <button id="clear-orders" class="btn-clear">Clear All Orders</button>
+  </div>
+</div>
+
+<div id="table-container"></div>
+
+<div id="grand-total-bar">
+    Grand Total: $<span id="grand-total-value">0.00</span>
+</div>
+
+<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+<script>
+  
+// Local storage key
+const GRAND_TOTAL_KEY = "orderTrackerGrandTotal";
+const STORAGE_KEY = "orderTrackerData";
+const TAX_RATE = 0.06;
+
+// Load saved data
+let savedData = localStorage.getItem(STORAGE_KEY);
+let tableData = savedData ? JSON.parse(savedData) : [];
+
+  
+// After loading savedData, ensure GrandTotalBar is displaying persistent data
+if (tableData.length) {
+    tableData.forEach(row => {
+        let price = +row.price || 0;
+        let qty = +row.quantity || 0;
+        let shipping = +row.shipping || 0;
+        let fees = +row.fees || 0;
+        let returns = +row.returns || 0;
+
+        let subtotal = price * qty;
+        let tax = subtotal * TAX_RATE;
+        let grandTotal = subtotal + tax + shipping + fees - returns;
+
+        row.tax = tax.toFixed(2);
+        row.total = grandTotal.toFixed(2);
+    });
+}
+
+
+// Remove button formatter
+function removeButton(cell){
+    const row = cell.getRow();
+    const btn = document.createElement("button");
+    btn.textContent = "−";
+    btn.className = "btn-table-delete";
+    btn.addEventListener("click", () => {
+        row.delete();
+        saveTableData();
+        updateGrandTotal();
+    });
+    return btn;
+}
+
+// Initialize Tabulator with reorganized columns
+let table = new Tabulator("#table-container", {
+    selectable: true,
+    height: "500px",
+    data: tableData,
+    layout: "fitDataStretch",
+    movableColumns: true,
+    resizableColumns: true,
+    pagination: false,
+    columns: [
+        {title: "Item Name", field: "itemName", editor: "input", sorter: "string"},
+        {title: "Item #", field: "itemNumber", editor: "input", sorter: "string"},
+        {title: "Quantity", field: "quantity", editor: "number", sorter: "number"},
+        {title: "Price", field: "price", editor: "number", sorter: "number"},
+        {title: "Shipping", field: "shipping", editor: "number", sorter: "number"},
+        {title: "Fees", field: "fees", editor: "number", sorter: "number"},
+        {title: "Returns", field: "returns", editor: "number", sorter: "number"},
+        {title: "Tax", field: "tax", editor: "number", sorter: "number"},
+        {title: "Total", field: "total", sorter: "number", mutator: totalMutator},
+        {title: "Date Ordered", field: "dateOrdered", editor: "input", sorter: "date"},
+        {title: "Date Shipped", field: "dateShipped", editor: "input", sorter: "date"},
+        {title: "Customer", field: "customer", editor: "input", sorter: "string"},
+        {title: "Tracking", field: "tracking", editor: "input", sorter: "string"},
+        {title: "", hozAlign: "center", width: 50, headerSort: false, formatter: removeButton}
+    ]
+});
+
+// Mutator for Total and auto-update tax
+function totalMutator(value, data){
+    let price = +data.price || 0;
+    let qty = +data.quantity || 0;
+    let shipping = +data.shipping || 0;
+    let fees = +data.fees || 0;
+    let returns = +data.returns || 0;
+
+    let subtotal = price * qty;
+    let tax = subtotal * TAX_RATE;
+    let total = subtotal + tax + shipping + fees - returns;
+
+    data.tax = tax.toFixed(2); // update tax field
+    return total.toFixed(2);
+}
+
+// Save table data to localStorage
+function saveTableData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(table.getData()));
+}
+
+// Update grand total (persistent across refreshes)
+function updateGrandTotal() {
+    const data = table.getData();
+    const grandTotal = data.reduce((sum, row) => sum + (+row.total || 0), 0);
+    document.getElementById("grand-total-value").textContent = grandTotal.toFixed(2);
+    localStorage.setItem(GRAND_TOTAL_KEY, grandTotal.toFixed(2)); // save to localStorage
+}
+
+// After loading tableData
+const savedGrandTotal = localStorage.getItem(GRAND_TOTAL_KEY);
+if(savedGrandTotal){
+    document.getElementById("grand-total-value").textContent = parseFloat(savedGrandTotal).toFixed(2);
+} else {
+    updateGrandTotal(); // calculate if not saved
+}
+
+// Update row totals on edit
+table.on("cellEdited", function(cell){
+    const row = cell.getRow();
+    const data = row.getData();
+
+    const subtotal = (+data.price || 0) * (+data.quantity || 0);
+    const tax = subtotal * TAX_RATE;
+    const total = subtotal + tax + (+data.shipping || 0) + (+data.fees || 0) - (+data.returns || 0);
+
+    row.update({
+        tax: tax.toFixed(2),
+        total: total.toFixed(2)
+    });
+
+    saveTableData();
+    updateGrandTotal();
+});
+
+// Ensure at least one row exists
+function ensureAtLeastOneRow() {
+    if (table.getData().length === 0) {
+        table.addRow({}, false);
+    }
+}
+
+// After table is initialized
+ensureAtLeastOneRow();
+
+// After deleting a row
+table.on("rowDeleted", function(){
+    ensureAtLeastOneRow();
+    saveTableData();
+    updateGrandTotal();
+});
+
+// Clear all orders
+document.getElementById("clear-orders").addEventListener("click", function(){
+    if(confirm("Are you sure you want to clear all orders? This cannot be undone.")){
+        localStorage.removeItem(STORAGE_KEY);
+        table.clearData();
+        ensureAtLeastOneRow(); // keep one blank row
+        saveTableData();
+        updateGrandTotal();
+    }
+});
+
+// Filter by customer
+document.getElementById("filter-customer").addEventListener("input", function(){
+    let val = this.value.trim();
+    val ? table.setFilter("customer", "like", val) : table.clearFilter();
+});
+
+// Export CSV
+document.getElementById("download-csv").addEventListener("click", function(){
+    table.download("csv", "orders.csv");
+});
+
+// Import CSV
+document.getElementById("upload-csv").addEventListener("change", function(e){
+    let file = e.target.files[0];
+    if(!file) return;
+    let reader = new FileReader();
+    reader.onload = function(ev){
+        let csv = ev.target.result;
+        let parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
+        table.setData(parsed).then(saveTableData);
+    };
+    reader.readAsText(file);
+});
+
+// Add new row button
+document.getElementById("add-row").addEventListener("click", () => {
+    table.addRow({}); // blank row at bottom
+    saveTableData();
+});
+</script>
+
+</body>
+</html>
