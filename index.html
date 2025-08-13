@@ -27,17 +27,17 @@
 </div>
 
 <script>
-  const WIP_KEY = "wipDismissed";
-  if(localStorage.getItem(WIP_KEY) === "true"){
-    document.getElementById("wip-overlay").style.display = "none";
+const WIP_KEY = "wipDismissed";
+if(localStorage.getItem(WIP_KEY) === "true"){
+  document.getElementById("wip-overlay").style.display = "none";
+}
+function closeWIP() {
+  const dontShow = document.getElementById("wip-dont-show").checked;
+  if(dontShow){
+    localStorage.setItem(WIP_KEY, "true");
   }
-  function closeWIP() {
-    const dontShow = document.getElementById("wip-dont-show").checked;
-    if(dontShow){
-      localStorage.setItem(WIP_KEY, "true");
-    }
-    document.getElementById("wip-overlay").style.display = "none";
-  }
+  document.getElementById("wip-overlay").style.display = "none";
+}
 </script>
 
 <!-- Header and Controls -->
@@ -68,8 +68,22 @@
 const STORAGE_KEY = "orderTrackerData";
 const TAX_RATE = 0.06;
 
-// Load saved data or start with one blank row
-let tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [{}];
+// Initialize table data with default row if localStorage empty
+let tableData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [{
+    itemName: "",
+    itemNumber: "",
+    quantity: 0,
+    price: 0,
+    shipping: 0,
+    fees: 0,
+    returns: 0,
+    tax: 0,
+    total: 0,
+    dateOrdered: "",
+    dateShipped: "",
+    customer: "",
+    tracking: ""
+}];
 
 // Mutator for Total column
 function totalMutator(value, data){
@@ -83,7 +97,7 @@ function totalMutator(value, data){
     let tax = subtotal * TAX_RATE;
     let total = subtotal + tax + shipping + fees - returns;
 
-    data.tax = tax; // keep as number
+    data.tax = tax; // store numeric tax
     return total;
 }
 
@@ -134,8 +148,8 @@ let table = new Tabulator("#table-container", {
         {title:"", hozAlign:"center", width:50, formatter:removeButton}
     ],
     cellEdited:function(cell){
-        // trigger total recalculation
-        cell.getRow().update({});
+        // recalc totals
+        cell.getRow().update({total: undefined});
         saveData();
         updateGrandTotal();
     },
@@ -143,20 +157,65 @@ let table = new Tabulator("#table-container", {
     rowDeleted:function(){ updateGrandTotal(); }
 });
 
-// Ensure at least one row
-if(table.getData().length===0) table.addRow({});
+// Ensure at least one row exists
+if(table.getData().length===0){
+    table.addRow({
+        itemName:"",
+        itemNumber:"",
+        quantity:0,
+        price:0,
+        shipping:0,
+        fees:0,
+        returns:0,
+        tax:0,
+        total:0,
+        dateOrdered:"",
+        dateShipped:"",
+        customer:"",
+        tracking:""
+    });
+}
 
 updateGrandTotal();
 
 // Controls
 document.getElementById("add-row").addEventListener("click", ()=>{ 
-    table.addRow({}); saveData(); 
+    table.addRow({
+        itemName:"",
+        itemNumber:"",
+        quantity:0,
+        price:0,
+        shipping:0,
+        fees:0,
+        returns:0,
+        tax:0,
+        total:0,
+        dateOrdered:"",
+        dateShipped:"",
+        customer:"",
+        tracking:""
+    });
+    saveData(); 
 });
 document.getElementById("clear-orders").addEventListener("click", ()=>{
     if(confirm("Clear all orders? This cannot be undone.")){
         localStorage.removeItem(STORAGE_KEY);
         table.clearData();
-        table.addRow({});
+        table.addRow({
+            itemName:"",
+            itemNumber:"",
+            quantity:0,
+            price:0,
+            shipping:0,
+            fees:0,
+            returns:0,
+            tax:0,
+            total:0,
+            dateOrdered:"",
+            dateShipped:"",
+            customer:"",
+            tracking:""
+        });
         saveData();
         updateGrandTotal();
     }
