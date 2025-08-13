@@ -23,6 +23,9 @@
 
 <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 <script>
+// Local storage key
+const STORAGE_KEY = "orderTrackerData";
+
 // Calculate row total
 function calcTotal(value, data) {
     let total = ((+data.price || 0) + (+data.tax || 0) + (+data.shipping || 0) + (+data.fees || 0)) 
@@ -30,12 +33,9 @@ function calcTotal(value, data) {
     return total.toFixed(2);
 }
 
-// Table data
-let tableData = [
-    // Sample data
-    {price: 10, tax: 1, shipping: 2, fees: 0.5, quantity: 2, itemName: "Widget A", itemNumber: "A001", returns: 0, comments: "", dateOrdered: "2025-08-01", dateShipped: "2025-08-03", customer: "John Doe", tracking: "TRK123"},
-    {price: 20, tax: 2, shipping: 3, fees: 1, quantity: 1, itemName: "Widget B", itemNumber: "B002", returns: 0, comments: "", dateOrdered: "2025-08-02", dateShipped: "2025-08-04", customer: "Jane Smith", tracking: "TRK456"}
-];
+// Load saved data from localStorage
+let savedData = localStorage.getItem(STORAGE_KEY);
+let tableData = savedData ? JSON.parse(savedData) : [];
 
 // Initialize table
 let table = new Tabulator("#table-container", {
@@ -63,6 +63,19 @@ let table = new Tabulator("#table-container", {
     ]
 });
 
+// Function to save table data to localStorage
+function saveTableData() {
+    let data = table.getData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+// Save on any cell edit
+table.on("cellEdited", saveTableData);
+
+// Also save on row add/delete
+table.on("rowAdded", saveTableData);
+table.on("rowDeleted", saveTableData);
+
 // Filter by customer
 document.getElementById("filter-customer").addEventListener("input", function(){
     let val = this.value.trim();
@@ -82,7 +95,7 @@ document.getElementById("upload-csv").addEventListener("change", function(e){
     reader.onload = function(ev){
         let csv = ev.target.result;
         let parsed = Tabulator.prototype.modules.data.loaders.csv(csv);
-        table.setData(parsed);
+        table.setData(parsed).then(saveTableData); // save after loading
     };
     reader.readAsText(file);
 });
