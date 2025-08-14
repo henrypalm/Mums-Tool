@@ -148,7 +148,7 @@ button {
 ============================= */
 #sync-status {
     position: fixed;
-    bottom: 60px; /* slightly above grand total bar */
+   /* bottom: 60px;  slightly above grand total bar */
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0,0,0,0.8);
