@@ -482,9 +482,21 @@
   });
 
   document.getElementById('filter-customer').addEventListener('input', function () {
-    const val = this.value.trim();
-    val ? table.setFilter('customer', 'like', val) : table.clearFilter();
-  });
+    const val = this.value.trim().toLowerCase();
+
+    if (!val) {
+        table.clearFilter();
+        return;
+    }
+
+    table.setFilter((data, filterParams) => {
+        // check each field
+        return ['customer', 'itemName', 'itemNumber', 'tracking'].some(field => {
+            const fieldVal = (data[field] || '').toString().toLowerCase();
+            return fieldVal.includes(val);
+        });
+    });
+});
 
   document.getElementById('download-csv').addEventListener('click', () => {
     table.download('csv', 'orders.csv');
