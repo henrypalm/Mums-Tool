@@ -63,11 +63,13 @@
   <button id="clear-orders" class="btn-clear">Clear All Orders</button>
 
   <!-- Login controls -->
-  <div id="sync-status" class="hidden">Last saved: never</div>
-  <button id="open-login" style="margin-left:auto;">Sign in</button>
+  <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+  <span id="sync-status" class="hidden">Last saved: never</span>
+  <span id="auth-status" style="opacity:.85;"></span>
+  <button id="open-login">Sign in</button>
   <button id="sign-out" class="hidden">Sign out</button>
+</div>
 
-  <span id="auth-status" style="margin-left:12px; opacity:.85;"></span>
 </div>
 
 <div id="order-table"></div>
