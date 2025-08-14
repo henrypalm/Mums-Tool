@@ -295,7 +295,17 @@
     return +total.toFixed(2);
   }
 
-  table.on("cellEdited", () => {
+  table.on("cellEdited", (cell) => {
+    const row = cell.getRow();
+    const data = row.getData();
+
+    data.tax = +(data.price * data.quantity * TAX_RATE).toFixed(2);
+
+    // Recalculate total for this row
+    const newTotal = totalMutator(data.total, data);
+    row.update({ total: newTotal }); // this triggers the cell redraw
+
+    // Save and update grand total
     triggerSave();
     updateGrandTotal();
   });
