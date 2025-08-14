@@ -12,33 +12,7 @@
 <link rel="icon" href="imgs/mumsTool.ico" type="image/x-icon" />
 <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css" rel="stylesheet" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  body { padding: 12px; font-family: Arial, sans-serif; background: #222; color: #fff; margin: 0; }
-  .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-  #order-table { height: 520px; }
-  #grand-total-bar { position: sticky; bottom: 0; background: #111; color:#fff; padding:10px 12px; font-weight:700; }
-  .btn-table-delete { padding:0 8px; line-height: 1.6; cursor:pointer; border-radius:4px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.06); }
-  input, button { font-size:14px; }
-
-  /* Login Modal */
-  #login-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 9999; }
-  #login-card { background: #fff; color:#111; padding: 20px; border-radius: 10px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
-  #login-card h2 { margin: 0 0 12px; }
-  .login-row { margin-bottom: 10px; }
-  .login-row input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-  .login-actions { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top: 8px; }
-  .login-actions button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; }
-  .btn-primary { background:#0d6efd; color:#fff; }
-  .btn-secondary { background:#e9ecef; color:#111; }
-  .btn-danger { background:#dc3545; color:#fff; }
-  #login-message { min-height: 20px; color:#c0392b; margin-top: 6px; }
-
-  /* WIP overlay */
-  #wip-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; z-index: 5000; }
-
-  /* small helpers */
-  .hidden { display:none !important; }
-</style>
+<link rel="stylesheet" href="/css/index-styles.css" />
 </head>
 <body>
 
@@ -89,6 +63,7 @@
   <button id="clear-orders" class="btn-clear">Clear All Orders</button>
 
   <!-- Login controls -->
+  <div id="sync-status" class="hidden">Last saved: never</div>
   <button id="open-login" style="margin-left:auto;">Sign in</button>
   <button id="sign-out" class="hidden">Sign out</button>
 
@@ -372,6 +347,17 @@
     }
     // Always mirror locally as a cache for faster startup
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e){ console.warn("localStorage write failed", e); }
+
+    // Update the "Last saved" timestamp
+    updateSyncStatus();
+  }
+
+  function updateSyncStatus() {
+    const now = new Date();
+    const ts = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const statusEl = document.getElementById('sync-status');
+    statusEl.textContent = `Last saved: ${ts}`;
+    statusEl.classList.remove('hidden');
   }
 
   async function loadRemoteData(uid){
@@ -470,6 +456,7 @@
     table.addRow(sanitizeRow({}));
     triggerSave();
     updateGrandTotal();
+    updateSyncStatus();
   });
 
   document.getElementById('clear-orders').addEventListener('click', () => {
@@ -478,6 +465,7 @@
       ensureAtLeastOneRow();
       triggerSave();
       updateGrandTotal();
+      updateSyncStatus();
     }
   });
 
