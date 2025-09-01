@@ -452,9 +452,11 @@
     await signOut(auth);
   });
 
-  function LoginMessage(msg, type = 'error'){ 
-    loginMsg.textContent = msg; 
-    loginMessageEl.className = type;
+  function LoginMessage(msg, type = 'error') {
+    loginMsg.textContent = msg || '';
+    // toggle styles
+    loginMsg.classList.remove('error', 'success');
+    if (type) loginMsg.classList.add(type);
   }
   
   function parseAuthError(err){
@@ -497,14 +499,14 @@
   btnForgot.addEventListener('click', async () => {
     const email = emailEl.value.trim();
     if (!email) {
-      LoginMessage('Enter your email above to reset your password.');
+      LoginMessage('Enter your email above to reset your password.', 'error');
       return;
     }
     try {
       await sendPasswordResetEmail(auth, email);
-      LoginMessage('Password reset email sent! Check your inbox.');
+      LoginMessage('Password reset email sent! Check your inbox.', 'success');
     } catch (err) {
-      LoginMessage(parseAuthError(err));
+      LoginMessage(parseAuthError(err), 'error');
     }
   });
 
