@@ -1,40 +1,3 @@
-/* Overlay background */
-#wip-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 15, 15, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    color: #fff;
-    font-size: 2rem;
-    text-align: center;
-    padding: 1rem;
-    flex-direction: column;
-}
-
-/* Message styling */
-#wip-overlay span {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: gold;
-}
-
-/* Button to close */
-#wip-overlay button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    background: gold;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    cursor: pointer;
-}
-
 /* =============================
    Body & Background
 ============================= */
@@ -46,7 +9,7 @@ body {
     background-position: center center;
     background-size: cover;
     background-attachment: fixed;
-    color: white;
+    color: #fff;
     margin: 0;
     padding: 20px;
 }
@@ -76,41 +39,62 @@ body {
 }
 
 /* =============================
-   Grand Total Bar
+   Header & Controls
 ============================= */
-#grand-total-bar {
-    position: fixed;
-    bottom: 20px;             /* slightly above bottom */
-    left: 0;
-    width: 100%;              /* full-width */
-    background-color: rgba(30,30,30,0.9); /* slightly transparent */
-    color: gold;
-    padding: 15px 0;
-    font-size: 20px;
-    font-weight: bold;
-    text-align: center;       /* centered text */
-    box-shadow: 0 0 15px gold, 0 -4px 10px rgba(0,0,0,0.7); /* glowing effect */
-    text-shadow: 0 0 8px gold; /* glow on text */
-    border-top: 2px solid gold; /* subtle top border for definition */
-    z-index: 9999;
+.header-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+h1, .controls {
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
 }
 
 /* =============================
-   Table Container
+   Inputs, Selects, Buttons
 ============================= */
-#table-container {
-    flex: 1;
-    overflow-x: auto; /* allow horizontal scroll on small screens */
+input, button, select {
+    font-size: 14px;
+    margin: 3px 0;
+    padding: 5px;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 4px;
 }
 
-/* Highlight row on hover for visibility */
+button {
+    cursor: pointer;
+}
+
+.btn-primary { background:#0d6efd; color:#fff; }
+.btn-secondary { background:#e9ecef; color:#111; }
+.btn-danger { background:#dc3545; color:#fff; }
+.btn-clear { background-color:#e74c3c; color:#fff; }
+.btn-clear:hover { background-color:#c0392b; }
+.btn-add-row { background-color:#3498db; color:#fff; border:none; padding:5px 10px; border-radius:3px; margin-top:5px; }
+.btn-add-row:hover { background-color:#2980b9; }
+
+/* =============================
+   Table
+============================= */
+#order-table { height:520px; }
+
 .tabulator-row:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* =============================
-   Table Buttons
-============================= */
 .btn-table-delete {
     background-color: #e74c3c;
     color: white;
@@ -125,86 +109,14 @@ body {
     background-color: #c0392b;
 }
 
-/* =============================
-   Add New Row Button
-============================= */
-.btn-add-row {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 3px;
-    margin-top: 5px; /* spacing below file input */
-}
-
-.btn-add-row:hover {
-    background-color: #2980b9;
-}
-
-/* =============================
-   Header & Controls
-============================= */
-.header-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* spacing between heading and controls */
-}
-
-h1, .controls {
-    background-color: rgba(0, 0, 0, 0.6); 
-    padding: 5px 10px;
-    border-radius: 5px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-/* =============================
-   Inputs, Selects, Buttons
-============================= */
-input, button, select {
-    margin: 3px 0;
-    padding: 5px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* Clear All Orders Button */
-.btn-clear {
-    background-color: #e74c3c;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-clear:hover {
-    background-color: #c0392b;
-}
-
-/* =============================
-   Table + / − Buttons
-============================= */
-.btn-table-add,
-.btn-table-delete {
-    padding: 0 4px;
-    margin: 0 1px;
-    border: none;
-    color: white;
-    font-weight: bold;
-    font-size: 12px;
-    cursor: pointer;
-    border-radius: 2px;
-    line-height: 1.2;
-}
-
-/* Green "+" Button (not used now, for reference) */
+/* Optional "+" button styling */
 .btn-table-add {
     background-color: #2ecc71;
+    padding: 0 4px;
+    margin: 0 1px;
+    font-weight: bold;
+    font-size: 12px;
+    border-radius: 2px;
 }
 
 .btn-table-add:hover {
@@ -212,30 +124,127 @@ input, button, select {
 }
 
 /* =============================
+   Grand Total Bar
+============================= */
+#grand-total-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    background-color: rgba(30,30,30,0.9);
+    color: gold;
+    padding: 15px 0;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 0 15px gold, 0 -4px 10px rgba(0,0,0,0.7);
+    text-shadow: 0 0 8px gold;
+    border-top: 2px solid gold;
+    z-index: 9999;
+}
+
+/* =============================
+   Last Saved Sync Status
+============================= */
+#sync-status {
+    position: fixed;
+   /* bottom: 60px;  slightly above grand total bar */
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(255,255,255,0.3);
+    z-index: 9999;
+}
+
+/* =============================
+   Login Modal
+============================= */
+#login-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+#login-card {
+    background: #fff;
+    color:#111;
+    padding: 20px;
+    border-radius: 10px;
+    width: 340px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+#login-card h2 { margin: 0 0 12px; }
+
+.login-row { margin-bottom: 10px; }
+
+.login-row input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+
+.login-actions { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top: 8px; }
+
+.login-actions button { padding: 10px 12px; border: 0; border-radius: 8px; cursor: pointer; }
+
+#login-message { min-height: 20px; color:#c0392b; margin-top: 6px; }
+
+/* =============================
+   WIP Overlay
+============================= */
+#wip-overlay {
+    position: fixed;
+    top:0; left:0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 15, 15, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color:#fff;
+    font-size: 2rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+#wip-overlay span {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: gold;
+}
+
+#wip-overlay button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: gold;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* =============================
+   Helpers
+============================= */
+.hidden { display:none !important; }
+
+/* =============================
    Responsive / Mobile
 ============================= */
 @media (max-width: 768px) {
-    .controls {
-        flex-direction: column; /* stack controls vertically */
-    }
-
-    input, button {
-        width: 100%; /* full width for easier tapping */
-        font-size: 16px;
-        padding: 8px;
-    }
-
-    .tabulator-row {
-        font-size: 14px; /* slightly larger for mobile */
-    }
-
-    #table-container .tabulator {
-        height: auto; /* table grows with content on mobile */
-    }
-
-    #grand-total-bar {
-        max-width: 90%; /* fit smaller screens nicely */
-        font-size: 18px;
-        padding: 12px 18px;
-    }
+    .controls { flex-direction: column; }
+    input, button { width: 100%; font-size:16px; padding:8px; }
+    .tabulator-row { font-size:14px; }
+    #table-container .tabulator { height:auto; }
+    #grand-total-bar { max-width:90%; font-size:18px; padding:12px 18px; }
+    #sync-status { font-size:12px; padding:4px 8px; bottom:55px; }
 }
