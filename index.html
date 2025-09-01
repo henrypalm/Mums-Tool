@@ -35,6 +35,11 @@
       <button id="btn-register" class="btn-secondary" title="Create account">Register</button>
       <button id="btn-logout" class="btn-danger hidden">Logout</button>
     </div>
+    <div style="margin-top:8px; text-align:right;">
+      <button id="btn-forgot" class="btn-link" style="background:none; border:0; color:#007bff; cursor:pointer; text-decoration:underline; font-size:0.9em;">
+        Forgot password?
+      </button>
+    </div>
     <div id="login-message"></div>
   </div>
 </div>
@@ -85,7 +90,7 @@
 <script type="module">
   // ----- Firebase imports (v12.x) -----
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail  } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
 
@@ -440,6 +445,8 @@
       case 'auth/email-already-in-use': return 'Email already in use';
       case 'auth/weak-password': return 'Weak password (use 6+ chars)';
       case 'auth/wrong-password': return 'Incorrect password';
+      case 'auth/missing-email': return 'Please enter an email';
+      case 'auth/invalid-email': return 'Invalid email format';
       default: return (err && err.message) ? err.message : 'Authentication error';
     }
   }
@@ -462,6 +469,22 @@
 
       const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if(cached.length){ table.setData(cached); updateGrandTotal(); }
+    }
+  });
+
+  const btnForgot = document.getElementById('btn-forgot');
+
+  btnForgot.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if (!email) {
+      LoginMessage('Enter your email above to reset your password.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      LoginMessage('Password reset email sent! Check your inbox.');
+    } catch (err) {
+      LoginMessage(parseAuthError(err));
     }
   });
 
