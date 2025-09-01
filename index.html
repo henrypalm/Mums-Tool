@@ -35,6 +35,11 @@
       <button id="btn-register" class="btn-secondary" title="Create account">Register</button>
       <button id="btn-logout" class="btn-danger hidden">Logout</button>
     </div>
+    <div style="margin-top:8px; text-align:right;">
+      <button id="btn-forgot" class="btn-link" style="background:none; border:0; color:#007bff; cursor:pointer; text-decoration:underline; font-size:0.9em;">
+        Forgot password?
+      </button>
+    </div>
     <div id="login-message"></div>
   </div>
 </div>
@@ -85,7 +90,7 @@
 <script type="module">
   // ----- Firebase imports (v12.x) -----
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+  import { getAuth, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail  } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
   import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-analytics.js";
 
@@ -401,25 +406,41 @@
   // click outside modal to close:
   loginModal.addEventListener('click', (ev) => { if (ev.target === loginModal) closeLoginModal(); });
 
-  btnLogin.addEventListener('click', async ()=>{
-    LoginMessage('');
-    try{
-      await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+  btnLogin.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    const pass = passEl.value.trim();
+    if (!email || !pass) {
+      LoginMessage('Please enter email and password', 'error');
+      return;
+    }
+    btnLogin.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      LoginMessage('Logged in successfully!', 'success');
       closeLoginModal();
-      passEl.value = '';
-    }catch(err){
-      LoginMessage(parseAuthError(err));
+    } catch (err) {
+      LoginMessage(parseAuthError(err), 'error');
+    } finally {
+      btnLogin.disabled = false;
     }
   });
-
-  btnRegister.addEventListener('click', async ()=>{
-    LoginMessage('');
-    try{
-      await createUserWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+  
+  btnRegister.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    const pass = passEl.value.trim();
+    if (!email || !pass) {
+      LoginMessage('Please enter email and password', 'error');
+      return;
+    }
+    btnRegister.disabled = true;
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      LoginMessage('Account created! Logged in.', 'success');
       closeLoginModal();
-      passEl.value = '';
-    }catch(err){
-      LoginMessage(parseAuthError(err));
+    } catch (err) {
+      LoginMessage(parseAuthError(err), 'error');
+    } finally {
+      btnRegister.disabled = false;
     }
   });
 
@@ -431,7 +452,13 @@
     await signOut(auth);
   });
 
-  function LoginMessage(msg){ loginMsg.textContent = msg; }
+  function LoginMessage(msg, type = 'error') {
+    loginMsg.textContent = msg || '';
+    // toggle styles
+    loginMsg.classList.remove('error', 'success');
+    if (type) loginMsg.classList.add(type);
+  }
+  
   function parseAuthError(err){
     const code = (err && err.code) ? err.code : '';
     switch(code){
@@ -440,6 +467,8 @@
       case 'auth/email-already-in-use': return 'Email already in use';
       case 'auth/weak-password': return 'Weak password (use 6+ chars)';
       case 'auth/wrong-password': return 'Incorrect password';
+      case 'auth/missing-email': return 'Please enter an email';
+      case 'auth/invalid-email': return 'Invalid email format';
       default: return (err && err.message) ? err.message : 'Authentication error';
     }
   }
@@ -462,6 +491,22 @@
 
       const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if(cached.length){ table.setData(cached); updateGrandTotal(); }
+    }
+  });
+
+  const btnForgot = document.getElementById('btn-forgot');
+
+  btnForgot.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if (!email) {
+      LoginMessage('Enter your email above to reset your password.', 'error');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      LoginMessage('Password reset email sent! Check your inbox.', 'success');
+    } catch (err) {
+      LoginMessage(parseAuthError(err), 'error');
     }
   });
 
