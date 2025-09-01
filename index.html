@@ -406,25 +406,41 @@
   // click outside modal to close:
   loginModal.addEventListener('click', (ev) => { if (ev.target === loginModal) closeLoginModal(); });
 
-  btnLogin.addEventListener('click', async ()=>{
-    LoginMessage('');
-    try{
-      await signInWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+  btnLogin.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    const pass = passEl.value.trim();
+    if (!email || !pass) {
+      LoginMessage('Please enter email and password', 'error');
+      return;
+    }
+    btnLogin.disabled = true;
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      LoginMessage('Logged in successfully!', 'success');
       closeLoginModal();
-      passEl.value = '';
-    }catch(err){
-      LoginMessage(parseAuthError(err));
+    } catch (err) {
+      LoginMessage(parseAuthError(err), 'error');
+    } finally {
+      btnLogin.disabled = false;
     }
   });
-
-  btnRegister.addEventListener('click', async ()=>{
-    LoginMessage('');
-    try{
-      await createUserWithEmailAndPassword(auth, emailEl.value.trim(), passEl.value);
+  
+  btnRegister.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    const pass = passEl.value.trim();
+    if (!email || !pass) {
+      LoginMessage('Please enter email and password', 'error');
+      return;
+    }
+    btnRegister.disabled = true;
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      LoginMessage('Account created! Logged in.', 'success');
       closeLoginModal();
-      passEl.value = '';
-    }catch(err){
-      LoginMessage(parseAuthError(err));
+    } catch (err) {
+      LoginMessage(parseAuthError(err), 'error');
+    } finally {
+      btnRegister.disabled = false;
     }
   });
 
@@ -436,7 +452,11 @@
     await signOut(auth);
   });
 
-  function LoginMessage(msg){ loginMsg.textContent = msg; }
+  function LoginMessage(msg, type = 'error'){ 
+    loginMsg.textContent = msg; 
+    loginMessageEl.className = type;
+  }
+  
   function parseAuthError(err){
     const code = (err && err.code) ? err.code : '';
     switch(code){
