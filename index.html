@@ -168,7 +168,7 @@
   function sanitizeRow(row) {
     return {
       itemName: row.itemName || "",
-      itemNumber: row.itemNumber || "",
+      binNumber: row.binNumber || "",
       quantity: Number(row.quantity) || 0,
       price: Number(row.price) || 0,
       shipping: Number(row.shipping) || 0,
@@ -249,7 +249,7 @@
     pagination: false,
     columns: [
       {title:"Item Name", field:"itemName", editor:"input"},
-      {title:"Item #", field:"itemNumber", editor:"input"},
+      {title:"Bin #", field:"binNumber", editor:"input"},
       {title:"Quantity", field:"quantity", editor:"number", sorter:"number"},
       {title:"Price", field:"price", editor:"number", sorter:"number",
         formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
@@ -491,7 +491,7 @@
 
     table.setFilter((data, filterParams) => {
         // check each field
-        return ['customer', 'itemName', 'itemNumber', 'tracking'].some(field => {
+        return ['customer', 'itemName', 'binNumber', 'tracking'].some(field => {
             const fieldVal = (data[field] || '').toString().toLowerCase();
             return fieldVal.includes(val);
         });
