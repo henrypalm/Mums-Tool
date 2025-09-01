@@ -54,8 +54,8 @@
 
 <div class="controls">
   <label>
-    Filter by Customer Name, Tracking Number, Item Name or Number:
-    <input id="filter-customer" type="text" placeholder="Type Customer Name, Tracking Number, Item Name or Number..." />
+    Filter by Customer Name, Tracking Number, Item Name, Bin Number or Location:
+    <input id="filter-customer" type="text" placeholder="Search Here" />
   </label>
   <input type="file" id="upload-csv" accept=".csv" />
   <button id="add-row" class="btn-add-row">Add New Row</button>
@@ -169,6 +169,7 @@
     return {
       itemName: row.itemName || "",
       binNumber: row.binNumber || "",
+      location: row.location || "",
       quantity: Number(row.quantity) || 0,
       price: Number(row.price) || 0,
       shipping: Number(row.shipping) || 0,
@@ -250,6 +251,7 @@
     columns: [
       {title:"Item Name", field:"itemName", editor:"input"},
       {title:"Bin #", field:"binNumber", editor:"input"},
+      {title:"Location", field:"location", editor:"input"},
       {title:"Quantity", field:"quantity", editor:"number", sorter:"number"},
       {title:"Price", field:"price", editor:"number", sorter:"number",
         formatter:"money", formatterParams:{symbol:"$", precision:2, thousand:",", decimal:"."}
@@ -491,7 +493,7 @@
 
     table.setFilter((data, filterParams) => {
         // check each field
-        return ['customer', 'itemName', 'binNumber', 'tracking'].some(field => {
+        return ['customer', 'itemName', 'binNumber', 'tracking', 'location'].some(field => {
             const fieldVal = (data[field] || '').toString().toLowerCase();
             return fieldVal.includes(val);
         });
